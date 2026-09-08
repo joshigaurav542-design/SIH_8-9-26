@@ -306,16 +306,17 @@ export default function App() {
                 </div>
               )}
               {activeStep === 3 && (
-                <>
+                <div className="space-y-4">
                   <ONDCPublishModal
                     product={scannedCraft}
+                    pricing={pricing}
                     isOnline={isOnline}
                     onPublishSuccess={handlePublishSuccess}
                     onViewCatalogue={() => setActiveStep(4)}
                   />
                   <StoryCertificate craft={scannedCraft} />
                   <OfflineSyncQueue isOnline={isOnline} />
-                </>
+                </div>
               )}
               {activeStep === 4 && (
                 <ArtisanCatalogue
@@ -420,14 +421,15 @@ export default function App() {
             )}
 
             {activeStep === 3 && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="space-y-6">
                 <ONDCPublishModal
                   product={scannedCraft}
+                  pricing={pricing}
                   isOnline={isOnline}
                   onPublishSuccess={handlePublishSuccess}
                   onViewCatalogue={() => setActiveStep(4)}
                 />
-                <div className="space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <StoryCertificate craft={scannedCraft} />
                   <OfflineSyncQueue isOnline={isOnline} />
                 </div>
