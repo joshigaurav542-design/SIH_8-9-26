@@ -248,23 +248,23 @@ export default function App() {
             {/* Studio vs Catalogue Switcher */}
             <div className="flex items-center glass-pill p-1">
               <button
-<<<<<<< HEAD
-                onClick={() => { if (activeStep === 4) setActiveStep(1); }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                  activeStep !== 4
+                onClick={() => { if (activeStep === 5) setActiveStep(1); }}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                  activeStep !== 5
                     ? 'bg-[var(--color-terracotta)] text-white shadow-md'
                     : 'text-gray-400 hover:text-white'
-                  }`}
+                }`}
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>{t('steps.step2', 'AI Listing Studio')}</span>
               </button>
               <button
                 onClick={() => setActiveStep(5)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${activeStep === 5
-                    ? 'bg-amber-500 text-black shadow-md'
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                  activeStep === 5
+                    ? 'bg-amber-500 text-black shadow-md font-bold'
                     : 'text-gray-400 hover:text-white'
-                  }`}
+                }`}
               >
                 <Package className="w-3.5 h-3.5" />
                 <span>{t('steps.step4', 'Catalogue')} ({catalogueProducts.length})</span>
