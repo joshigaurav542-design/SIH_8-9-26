@@ -1,8 +1,8 @@
 import React from 'react';
-import { Globe, Wifi, WifiOff, ShieldCheck, Sparkles } from 'lucide-react';
+import { Globe, Wifi, WifiOff, ShieldCheck, Sparkles, Sun, Moon } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
-export default function Navbar({ selectedLang, onSelectLang, isOnline, onToggleOnline }) {
+export default function Navbar({ selectedLang, onSelectLang, isOnline, onToggleOnline, theme = 'dark', onToggleTheme }) {
   const { language, setLanguage, languages, t } = useLanguage();
   
   const currentLang = selectedLang || language;
@@ -82,6 +82,16 @@ export default function Navbar({ selectedLang, onSelectLang, isOnline, onToggleO
                 <span className="sm:hidden">Offline</span>
               </>
             )}
+          </button>
+
+          {/* Theme Mode Toggle (Dark / Light) */}
+          <button
+            onClick={onToggleTheme}
+            title={theme === 'dark' ? 'Switch to Warm Light Theme' : 'Switch to Dark Artisan-Tech Theme'}
+            aria-label="Toggle theme"
+            className="flex items-center justify-center w-8 h-8 rounded-full glass-pill border border-amber-500/30 text-[var(--color-saffron)] hover:text-white hover:border-amber-400/60 transition-all bg-[#131B2E]/90 cursor-pointer"
+          >
+            {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </button>
         </div>
 

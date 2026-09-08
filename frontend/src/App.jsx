@@ -25,6 +25,36 @@ export default function App() {
   const [activeStep, setActiveStep] = useState(1);
   const [isMobileSimView, setIsMobileSimView] = useState(false);
 
+  // Theme state with localStorage persistence
+  const [theme, setTheme] = useState(() => {
+    try {
+      return localStorage.getItem('artisan_theme') || 'dark';
+    } catch {
+      return 'dark';
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('artisan_theme', theme);
+      if (theme === 'light') {
+        document.documentElement.classList.add('light');
+        document.documentElement.classList.remove('dark');
+        document.documentElement.setAttribute('data-theme', 'light');
+      } else {
+        document.documentElement.classList.add('dark');
+        document.documentElement.classList.remove('light');
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    } catch (err) {
+      console.warn('Theme update error:', err);
+    }
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
+  };
+
   // Shared state between steps
   const [capturedVoice, setCapturedVoice] = useState(null);
   const [scannedCraft, setScannedCraft] = useState({
@@ -195,6 +225,8 @@ export default function App() {
         onSelectLang={setLanguage}
         isOnline={isOnline}
         onToggleOnline={() => setIsOnline(!isOnline)}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
 
       <main className="max-w-6xl mx-auto px-4 w-full flex-grow">
