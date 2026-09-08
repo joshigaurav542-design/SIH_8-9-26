@@ -27,13 +27,31 @@ class Settings(BaseSettings):
     # ONDC / Beckn Network Settings
     ONDC_BPP_ID: str = "artisan-bpp.brocode.sih.in"
     ONDC_BPP_URI: str = "http://localhost:8000/api/v1/ondc"
-    ONDC_GATEWAY_URL: str = "https://staging.gateway.proteantech.in"
-    
+    # Server config
+    PORT: int = 8000
+    HOST: str = "0.0.0.0"
+
+    # AI Vision & Voice Settings
+    BHASHINI_API_KEY: str = "mock-bhashini-api-key"
+    BHASHINI_USER_ID: str = "mock-user-id"
+    GEMINI_API_KEY: str = "your-google-gemini-api-key"
+    WHISPER_MODEL_SIZE: str = "base"
+
+    # Additional ONDC keys
+    ONDC_BAP_ID: str = "buyer-app-network.ondc.org"
+    ONDC_SIGNING_PRIVATE_KEY: str = "mock-ed25519-private-key"
+    ONDC_SUBSCRIBER_ID: str = "artisan-network-provider"
+
+    # Cache
+    REDIS_URL: str = "redis://localhost:6379/0"
+
     # Vernacular Speech Config
     SUPPORTED_LANGUAGES: List[str] = ["hi-IN", "bn-IN", "ta-IN", "te-IN", "mr-IN", "gu-IN", "en-IN"]
 
     class Config:
-        case_sensitive = True
+        case_sensitive = False
+        extra = "ignore"
         env_file = ".env"
 
 settings = Settings()
+
