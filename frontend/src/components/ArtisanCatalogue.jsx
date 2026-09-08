@@ -24,10 +24,12 @@ import {
   ShieldCheck,
   IndianRupee,
   RefreshCw,
-  Edit3
+  Edit3,
+  Database
 } from 'lucide-react';
 import { INITIAL_CATALOGUE, getSuggestedPrice } from '../data/catalogueData';
 import PricingCalculator from './PricingCalculator';
+import OfflineSyncQueue from './OfflineSyncQueue';
 
 export { INITIAL_CATALOGUE, getSuggestedPrice };
 
@@ -40,7 +42,8 @@ export default function ArtisanCatalogue({
   onCreateNewListing,
   pricing,
   onPriceCalculated,
-  scannedCraft
+  scannedCraft,
+  isOnline = true
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
@@ -80,6 +83,7 @@ export default function ArtisanCatalogue({
 
   // Embedded Pricing Suggestion Advisor State
   const [showPricingAdvisor, setShowPricingAdvisor] = useState(false);
+  const [showSyncQueue, setShowSyncQueue] = useState(true);
   const [advisorRawCost, setAdvisorRawCost] = useState(160);
   const [advisorLaborHours, setAdvisorLaborHours] = useState(9);
 
@@ -385,6 +389,17 @@ export default function ArtisanCatalogue({
             )}
 
             <button
+              onClick={() => setShowSyncQueue(!showSyncQueue)}
+              className={`btn-secondary px-3 py-2 text-xs flex items-center gap-1.5 shadow-sm transition-all ${
+                showSyncQueue ? 'bg-cyan-500/15 text-cyan-300 border-cyan-500/40' : 'text-gray-300 hover:text-white'
+              }`}
+              title="Toggle Edge Offline-First SQLite Sync status"
+            >
+              <Database className="w-3.5 h-3.5 text-cyan-400" />
+              <span>{showSyncQueue ? 'Hide Offline Sync' : 'Edge SQLite Sync'}</span>
+            </button>
+
+            <button
               onClick={() => setIsAddModalOpen(true)}
               className="btn-primary px-3.5 py-2 text-xs flex items-center gap-1.5 shadow-lg"
             >
@@ -443,6 +458,13 @@ export default function ArtisanCatalogue({
 
         </div>
       </div>
+
+      {/* Edge Offline-First SQLite Sync (Only in My Catalogue) */}
+      {showSyncQueue && (
+        <div className="mb-6">
+          <OfflineSyncQueue isOnline={isOnline} />
+        </div>
+      )}
 
       {/* Merged AI Price Suggestion Engine (Embedded in My Catalogue) */}
       {showPricingAdvisor && (

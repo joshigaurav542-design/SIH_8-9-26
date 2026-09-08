@@ -83,3 +83,15 @@ export function getSuggestedPrice(product) {
   // Algorithmic Living Wage benchmark: Material + Labor (₹145/hr) + 25% Master Artisan margin
   return Math.round((raw + hours * 145) * 1.25);
 }
+
+// Re-export full master dataset and helpers from artisanDataset
+export {
+  ARTISAN_MASTER_DATASET,
+  ARTISAN_DATASET,
+  ARTISAN_CATEGORIES,
+  getProductsByCategory,
+  getGiCertifiedProducts,
+  getArtisanDatasetStats,
+  formatForOndcProtocol
+} from './artisanDataset';
+

@@ -7,9 +7,15 @@ import ListingPhotoStudio from './components/ListingPhotoStudio';
 import PricingCalculator from './components/PricingCalculator';
 import StoryCertificate from './components/StoryCertificate';
 import ONDCPublishModal from './components/ONDCPublishModal';
-import OfflineSyncQueue from './components/OfflineSyncQueue';
 import NationalImpactMetrics from './components/NationalImpactMetrics';
 import ArtisanCatalogue, { INITIAL_CATALOGUE } from './components/ArtisanCatalogue';
+import {
+  fetchProducts,
+  saveProductToDatabase,
+  updateProductInDatabase,
+  deleteProductFromDatabase,
+  toggleProductOndcInDatabase
+} from './services/apiService';
 
 export default function App() {
   const [selectedLang, setSelectedLang] = useState('hi-IN');
@@ -54,6 +60,16 @@ export default function App() {
     return INITIAL_CATALOGUE;
   });
 
+  // Load products from live Database on startup (with offline fallback)
+  useEffect(() => {
+    fetchProducts().then(({ data, source }) => {
+      console.log(`[Database Sync] Loaded ${data.length} products from: ${source}`);
+      if (data && data.length > 0) {
+        setCatalogueProducts(data);
+      }
+    });
+  }, []);
+
   useEffect(() => {
     try {
       localStorage.setItem('artisan_catalogue_v1', JSON.stringify(catalogueProducts));
@@ -64,26 +80,39 @@ export default function App() {
 
   const handleAddProduct = (newProd) => {
     setCatalogueProducts(prev => [newProd, ...prev]);
+    saveProductToDatabase(newProd);
   };
 
   const handleRemoveProduct = (productId) => {
-    setCatalogueProducts(prev => prev.filter(p => p.id !== productId));
+    setCatalogueProducts(prev => prev.filter(p => p.id !== productId && p.sku !== productId));
+    deleteProductFromDatabase(productId);
   };
 
   const handleEditProduct = (updatedProd) => {
     setCatalogueProducts(prev =>
       prev.map(p => (p.id === updatedProd.id ? updatedProd : p))
     );
+    updateProductInDatabase(updatedProd.id || updatedProd.sku, updatedProd);
   };
 
   const handleToggleOndcStatus = (productId) => {
+    let nextStatus = false;
     setCatalogueProducts(prev =>
-      prev.map(p => (p.id === productId ? { ...p, ondcPublished: !p.ondcPublished } : p))
+      prev.map(p => {
+        if (p.id === productId || p.sku === productId) {
+          nextStatus = !p.ondcPublished;
+          return { ...p, ondcPublished: nextStatus };
+        }
+        return p;
+      })
     );
+    toggleProductOndcInDatabase(productId, nextStatus);
   };
 
   const handlePublishSuccess = () => {
-    // Automatically add/update the current product in the catalogue
+    // Automatically add/update the current product in the catalogue and persist to database
+    let newlyCreatedEntry = null;
+
     setCatalogueProducts(prev => {
       const existingIdx = prev.findIndex(p => p.title === scannedCraft.name || p.id === scannedCraft.id);
       if (existingIdx >= 0) {
@@ -94,6 +123,7 @@ export default function App() {
           price: pricing.fairMarketPrice || updated[existingIdx].price,
           image: scannedCraft.image || updated[existingIdx].image
         };
+        newlyCreatedEntry = updated[existingIdx];
         return updated;
       }
       const newEntry = {
@@ -114,8 +144,16 @@ export default function App() {
         image: scannedCraft.image,
         dateAdded: new Date().toISOString().split('T')[0]
       };
+      newlyCreatedEntry = newEntry;
       return [newEntry, ...prev];
     });
+
+    // Asynchronously commit to the backend database
+    if (newlyCreatedEntry) {
+      saveProductToDatabase(newlyCreatedEntry).then(res => {
+        console.log('[DB Sync] Result:', res.synced ? 'Persisted to Database' : 'Queued Offline');
+      });
+    }
   };
 
   const handleListingPhotosApplied = (primaryImageUrl, allPhotos) => {
@@ -178,9 +216,9 @@ export default function App() {
             {/* Studio vs Catalogue Switcher */}
             <div className="flex items-center glass-pill p-1">
               <button
-                onClick={() => { if (activeStep === 5) setActiveStep(1); }}
+                onClick={() => { if (activeStep === 4) setActiveStep(1); }}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                  activeStep !== 5
+                  activeStep !== 4
                     ? 'bg-[var(--color-terracotta)] text-white shadow-md'
                     : 'text-gray-400 hover:text-white'
                 }`}
@@ -189,9 +227,9 @@ export default function App() {
                 <span>AI Listing Studio</span>
               </button>
               <button
-                onClick={() => setActiveStep(5)}
+                onClick={() => setActiveStep(4)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                  activeStep === 5
+                  activeStep === 4
                     ? 'bg-amber-500 text-black shadow-md'
                     : 'text-gray-400 hover:text-white'
                 }`}
@@ -313,7 +351,6 @@ export default function App() {
                     onViewCatalogue={() => setActiveStep(4)}
                   />
                   <StoryCertificate craft={scannedCraft} />
-                  <OfflineSyncQueue isOnline={isOnline} />
                 </>
               )}
               {activeStep === 4 && (
@@ -327,6 +364,7 @@ export default function App() {
                   pricing={pricing}
                   onPriceCalculated={setPricing}
                   scannedCraft={scannedCraft}
+                  isOnline={isOnline}
                 />
               )}
             </div>
@@ -356,13 +394,8 @@ export default function App() {
           <div className="space-y-6">
             
             {activeStep === 1 && (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2">
-                  <VoicePromptCapture language={selectedLang} onVoiceExtracted={handleVoiceExtracted} />
-                </div>
-                <div>
-                  <OfflineSyncQueue isOnline={isOnline} />
-                </div>
+              <div className="max-w-4xl mx-auto">
+                <VoicePromptCapture language={selectedLang} onVoiceExtracted={handleVoiceExtracted} />
               </div>
             )}
 
@@ -401,19 +434,14 @@ export default function App() {
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  <div className="lg:col-span-2">
-                    {step2SubTab === 'studio' ? (
-                      <ListingPhotoStudio
-                        onApplyToListing={handleListingPhotosApplied}
-                      />
-                    ) : (
-                      <VisionScanner onScanComplete={setScannedCraft} />
-                    )}
-                  </div>
-                  <div>
-                    <OfflineSyncQueue isOnline={isOnline} />
-                  </div>
+                <div className="w-full">
+                  {step2SubTab === 'studio' ? (
+                    <ListingPhotoStudio
+                      onApplyToListing={handleListingPhotosApplied}
+                    />
+                  ) : (
+                    <VisionScanner onScanComplete={setScannedCraft} />
+                  )}
                 </div>
               </div>
             )}
@@ -426,10 +454,7 @@ export default function App() {
                   onPublishSuccess={handlePublishSuccess}
                   onViewCatalogue={() => setActiveStep(4)}
                 />
-                <div className="space-y-6">
-                  <StoryCertificate craft={scannedCraft} />
-                  <OfflineSyncQueue isOnline={isOnline} />
-                </div>
+                <StoryCertificate craft={scannedCraft} />
               </div>
             )}
 
@@ -444,6 +469,7 @@ export default function App() {
                 pricing={pricing}
                 onPriceCalculated={setPricing}
                 scannedCraft={scannedCraft}
+                isOnline={isOnline}
               />
             )}
 
