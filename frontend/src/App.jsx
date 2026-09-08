@@ -178,9 +178,9 @@ export default function App() {
             {/* Studio vs Catalogue Switcher */}
             <div className="flex items-center glass-pill p-1">
               <button
-                onClick={() => { if (activeStep === 5) setActiveStep(1); }}
+                onClick={() => { if (activeStep === 4 || activeStep === 5) setActiveStep(1); }}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                  activeStep !== 5
+                  activeStep !== 4 && activeStep !== 5
                     ? 'bg-[var(--color-terracotta)] text-white shadow-md'
                     : 'text-gray-400 hover:text-white'
                 }`}
@@ -189,9 +189,9 @@ export default function App() {
                 <span>AI Listing Studio</span>
               </button>
               <button
-                onClick={() => setActiveStep(5)}
+                onClick={() => setActiveStep(4)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                  activeStep === 5
+                  activeStep === 4 || activeStep === 5
                     ? 'bg-amber-500 text-black shadow-md'
                     : 'text-gray-400 hover:text-white'
                 }`}
