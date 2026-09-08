@@ -17,7 +17,6 @@ import StoryCertificate from './components/StoryCertificate';
 import ONDCPublishModal from './components/ONDCPublishModal';
 import NationalImpactMetrics from './components/NationalImpactMetrics';
 import ArtisanCatalogue, { INITIAL_CATALOGUE } from './components/ArtisanCatalogue';
-import OfflineSyncQueue from './components/OfflineSyncQueue';
 
 export default function App() {
   const { language, setLanguage, t } = useLanguage();
@@ -188,35 +187,6 @@ export default function App() {
   return (
     <div className="min-h-screen flex flex-col justify-between pb-10">
 
-      {/* ── Animated Moving Background ── */}
-      <div id="bg-canvas" aria-hidden="true">
-        {/* Drifting mesh grid */}
-        <div className="bg-grid" />
-
-        {/* Gradient orbs */}
-        <div className="bg-orb bg-orb-1" />
-        <div className="bg-orb bg-orb-2" />
-        <div className="bg-orb bg-orb-3" />
-        <div className="bg-orb bg-orb-4" />
-        <div className="bg-orb bg-orb-5" />
-
-        {/* Twinkling stars */}
-        <div className="bg-star" /><div className="bg-star" /><div className="bg-star" />
-        <div className="bg-star" /><div className="bg-star" /><div className="bg-star" />
-        <div className="bg-star" /><div className="bg-star" /><div className="bg-star" />
-        <div className="bg-star" /><div className="bg-star" /><div className="bg-star" />
-
-        {/* Rising glow particles */}
-        <div className="bg-particle" /><div className="bg-particle" /><div className="bg-particle" />
-        <div className="bg-particle" /><div className="bg-particle" /><div className="bg-particle" />
-        <div className="bg-particle" /><div className="bg-particle" /><div className="bg-particle" />
-        <div className="bg-particle" /><div className="bg-particle" /><div className="bg-particle" />
-        <div className="bg-particle" /><div className="bg-particle" /><div className="bg-particle" />
-
-        {/* Film grain / noise overlay */}
-        <div className="bg-noise" />
-      </div>
-
       {/* Navigation Header */}
       <Navbar
         selectedLang={language}
@@ -249,22 +219,20 @@ export default function App() {
             <div className="flex items-center glass-pill p-1">
               <button
                 onClick={() => { if (activeStep === 5) setActiveStep(1); }}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                  activeStep !== 5
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${activeStep !== 5
                     ? 'bg-[var(--color-terracotta)] text-white shadow-md'
                     : 'text-gray-400 hover:text-white'
-                }`}
+                  }`}
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>{t('steps.step2', 'AI Listing Studio')}</span>
               </button>
               <button
                 onClick={() => setActiveStep(5)}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                  activeStep === 5
-                    ? 'bg-amber-500 text-black shadow-md font-bold'
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${activeStep === 5
+                    ? 'bg-amber-500 text-black shadow-md'
                     : 'text-gray-400 hover:text-white'
-                }`}
+                  }`}
               >
                 <Package className="w-3.5 h-3.5" />
                 <span>{t('steps.step4', 'Catalogue')} ({catalogueProducts.length})</span>

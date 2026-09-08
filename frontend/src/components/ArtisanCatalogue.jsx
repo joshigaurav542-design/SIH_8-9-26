@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Package,
   Plus,
@@ -29,7 +29,6 @@ import {
 } from 'lucide-react';
 import { INITIAL_CATALOGUE, getSuggestedPrice } from '../data/catalogueData';
 import OfflineSyncQueue from './OfflineSyncQueue';
-import PricingCalculator from './PricingCalculator';
 import { useLanguage } from '../context/LanguageContext';
 
 export { INITIAL_CATALOGUE, getSuggestedPrice };
@@ -219,27 +218,30 @@ export default function ArtisanCatalogue({
   // Categories for filtering
   const categories = ['ALL', 'Pottery & Terracotta', 'Handloom & Silk', 'Bell Metal Casting', 'Woodcraft & Lacquer'];
 
-  // Filter products
-  const filteredProducts = products.filter(prod => {
-    const matchesSearch =
-      prod.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      prod.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      prod.category.toLowerCase().includes(searchQuery.toLowerCase());
+  // Filter products safely
+  const filteredProducts = (products || []).filter(prod => {
+    if (!prod) return false;
+    const title = (prod.title || '').toLowerCase();
+    const sku = (prod.sku || '').toLowerCase();
+    const cat = (prod.category || '').toLowerCase();
+    const query = (searchQuery || '').toLowerCase();
 
+    const matchesSearch = title.includes(query) || sku.includes(query) || cat.includes(query);
     const matchesCategory = selectedCategory === 'ALL' || prod.category === selectedCategory;
+    const isLive = Boolean(prod.ondcPublished ?? prod.ondc_published);
 
     const matchesStatus =
       statusFilter === 'ALL' ||
-      (statusFilter === 'ONDC_LIVE' && prod.ondcPublished) ||
-      (statusFilter === 'DRAFT' && !prod.ondcPublished);
+      (statusFilter === 'ONDC_LIVE' && isLive) ||
+      (statusFilter === 'DRAFT' && !isLive);
 
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
-  // Analytics Metrics
-  const totalValue = products.reduce((acc, p) => acc + (Number(p.price) || 0), 0);
-  const ondcLiveCount = products.filter(p => p.ondcPublished).length;
-  const giCertifiedCount = products.filter(p => p.giCertified).length;
+  // Analytics Metrics safely
+  const totalValue = (products || []).reduce((acc, p) => acc + (Number(p?.price || p?.suggested_price) || 0), 0);
+  const ondcLiveCount = (products || []).filter(p => Boolean(p?.ondcPublished ?? p?.ondc_published)).length;
+  const giCertifiedCount = (products || []).filter(p => Boolean(p?.giCertified ?? p?.gi_certified)).length;
 
   // Handle Photo Upload in Add Modal
   const handleModalPhotoUpload = (e) => {
