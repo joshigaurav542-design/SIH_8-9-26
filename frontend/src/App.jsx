@@ -10,9 +10,10 @@ import ONDCPublishModal from './components/ONDCPublishModal';
 import OfflineSyncQueue from './components/OfflineSyncQueue';
 import NationalImpactMetrics from './components/NationalImpactMetrics';
 import ArtisanCatalogue, { INITIAL_CATALOGUE } from './components/ArtisanCatalogue';
+import { useLanguage } from './context/LanguageContext';
 
 export default function App() {
-  const [selectedLang, setSelectedLang] = useState('hi-IN');
+  const { language, setLanguage, t } = useLanguage();
   const [isOnline, setIsOnline] = useState(true);
   const [activeStep, setActiveStep] = useState(1);
   const [isMobileSimView, setIsMobileSimView] = useState(false);
@@ -138,10 +139,10 @@ export default function App() {
   };
 
   const steps = [
-    { id: 1, label: 'Voice Prompt', hint: 'Vernacular Speech' },
-    { id: 2, label: 'Edge AI Vision', hint: 'Camera & Hard Drive' },
-    { id: 3, label: 'ONDC Publish', hint: 'Direct Market Sync' },
-    { id: 4, label: 'My Catalogue', hint: `${catalogueProducts.length} Items & Pricing` }
+    { id: 1, label: t('steps.step1', '1. Voice Prompt'), hint: t('steps.step1Sub', 'Vernacular Speech') },
+    { id: 2, label: t('steps.step2', '2. Edge AI Vision'), hint: t('steps.step2Sub', 'Camera & Hard Drive') },
+    { id: 3, label: t('steps.step3', '3. ONDC Publish'), hint: t('steps.step3Sub', 'Direct Market Sync') },
+    { id: 4, label: t('steps.step4', '4. My Catalogue'), hint: `${catalogueProducts.length} ${t('catalogue.colProduct', 'Items')}` }
   ];
 
   return (
@@ -149,8 +150,8 @@ export default function App() {
       
       {/* Navigation Header */}
       <Navbar
-        selectedLang={selectedLang}
-        onSelectLang={setSelectedLang}
+        selectedLang={language}
+        onSelectLang={setLanguage}
         isOnline={isOnline}
         onToggleOnline={() => setIsOnline(!isOnline)}
       />
@@ -165,10 +166,10 @@ export default function App() {
               <span>Smart India Hackathon 2026 Solution Showcase</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight font-heading">
-              AI-Driven Market Linkage for Marginalized Artisans
+              {t('nav.title', 'Smart Artisan Companion')}
             </h2>
             <p className="text-xs sm:text-sm text-[var(--text-muted)] max-w-2xl mt-1">
-              Bypassing middlemen through on-device edge AI cataloguing, vernacular voice-to-text, living wage pricing, and direct ONDC commerce.
+              {t('voice.subtitle')}
             </p>
           </div>
 
@@ -186,7 +187,7 @@ export default function App() {
                 }`}
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>AI Listing Studio</span>
+                <span>{t('steps.step2', 'AI Listing Studio')}</span>
               </button>
               <button
                 onClick={() => setActiveStep(5)}
@@ -197,7 +198,7 @@ export default function App() {
                 }`}
               >
                 <Package className="w-3.5 h-3.5" />
-                <span>Catalogue ({catalogueProducts.length})</span>
+                <span>{t('steps.step4', 'Catalogue')} ({catalogueProducts.length})</span>
               </button>
             </div>
 
@@ -266,7 +267,7 @@ export default function App() {
             
             <div className="space-y-4 max-h-[720px] overflow-y-auto pr-1">
               {activeStep === 1 && (
-                <VoicePromptCapture language={selectedLang} onVoiceExtracted={handleVoiceExtracted} />
+                <VoicePromptCapture language={language} onVoiceExtracted={handleVoiceExtracted} />
               )}
               {activeStep === 2 && (
                 <div className="space-y-3">
@@ -358,7 +359,7 @@ export default function App() {
             {activeStep === 1 && (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2">
-                  <VoicePromptCapture language={selectedLang} onVoiceExtracted={handleVoiceExtracted} />
+                  <VoicePromptCapture language={language} onVoiceExtracted={handleVoiceExtracted} />
                 </div>
                 <div>
                   <OfflineSyncQueue isOnline={isOnline} />

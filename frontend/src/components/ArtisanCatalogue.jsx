@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { INITIAL_CATALOGUE, getSuggestedPrice } from '../data/catalogueData';
 import PricingCalculator from './PricingCalculator';
+import { useLanguage } from '../context/LanguageContext';
 
 export { INITIAL_CATALOGUE, getSuggestedPrice };
 
@@ -42,6 +43,7 @@ export default function ArtisanCatalogue({
   onPriceCalculated,
   scannedCraft
 }) {
+  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL'); // 'ALL' | 'ONDC_LIVE' | 'DRAFT'
@@ -342,13 +344,13 @@ export default function ArtisanCatalogue({
             </div>
             <div>
               <h2 className="text-lg font-bold text-white font-heading flex items-center gap-2">
-                <span>Artisan Product Catalogue</span>
+                <span>{t('catalogue.title', 'Artisan Product Catalogue')}</span>
                 <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  {products.length} Items Listed
+                  {products.length} {t('catalogue.colProduct', 'Items')}
                 </span>
               </h2>
               <p className="text-xs text-[var(--text-muted)]">
-                Manage your verified craft listings, track live ONDC network status, and add new inventory.
+                {t('catalogue.subtitle', 'Manage your verified craft listings, track live ONDC network status, and add new inventory.')}
               </p>
             </div>
           </div>
@@ -361,7 +363,7 @@ export default function ArtisanCatalogue({
               title="Click photo of craft on the spot using camera"
             >
               <Camera className="w-3.5 h-3.5 text-[var(--color-saffron)]" />
-              <span>Click Photo on Spot</span>
+              <span>{t('catalogue.clickPhotoSpot', 'Click Photo on Spot')}</span>
             </button>
 
             <button
@@ -370,7 +372,7 @@ export default function ArtisanCatalogue({
               title="Open the AI Living Wage Price Suggestion Calculator directly in Catalogue"
             >
               <Sparkles className="w-3.5 h-3.5 text-[var(--color-saffron)]" />
-              <span>{showPricingAdvisor ? 'Hide Price Engine' : 'AI Price Suggestion Engine'}</span>
+              <span>{showPricingAdvisor ? t('common.close', 'Hide Price Engine') : t('catalogue.priceEngine', 'AI Price Suggestion Engine')}</span>
             </button>
 
             {onCreateNewListing && (
@@ -380,7 +382,7 @@ export default function ArtisanCatalogue({
                 title="Launch the AI listing studio"
               >
                 <Sparkles className="w-3.5 h-3.5 text-[var(--color-saffron)]" />
-                <span>AI Listing Studio</span>
+                <span>{t('steps.step2', 'AI Listing Studio')}</span>
               </button>
             )}
 
@@ -389,7 +391,7 @@ export default function ArtisanCatalogue({
               className="btn-primary px-3.5 py-2 text-xs flex items-center gap-1.5 shadow-lg"
             >
               <Plus className="w-4 h-4" />
-              <span>Add New Product</span>
+              <span>{t('catalogue.addProduct', 'Add New Product')}</span>
             </button>
           </div>
         </div>
@@ -399,7 +401,7 @@ export default function ArtisanCatalogue({
           
           <div className="p-3 rounded-xl bg-black/30 border border-[var(--border-glass)]">
             <div className="text-[11px] text-gray-400 mb-1 flex items-center justify-between">
-              <span>Total Listed</span>
+              <span>{t('stats.productsListed', 'Total Listed')}</span>
               <Package className="w-3.5 h-3.5 text-amber-400" />
             </div>
             <div className="text-xl font-bold text-white font-heading">
@@ -410,7 +412,7 @@ export default function ArtisanCatalogue({
 
           <div className="p-3 rounded-xl bg-black/30 border border-[var(--border-glass)]">
             <div className="text-[11px] text-gray-400 mb-1 flex items-center justify-between">
-              <span>ONDC Live</span>
+              <span>{t('stats.liveOnOndc', 'ONDC Live')}</span>
               <Globe className="w-3.5 h-3.5 text-blue-400" />
             </div>
             <div className="text-xl font-bold text-emerald-400 font-heading">
@@ -421,13 +423,13 @@ export default function ArtisanCatalogue({
 
           <div className="p-3 rounded-xl bg-black/30 border border-[var(--border-glass)]">
             <div className="text-[11px] text-gray-400 mb-1 flex items-center justify-between">
-              <span>Catalogue Value</span>
+              <span>{t('catalogue.listedPrice', 'Catalogue Value')}</span>
               <IndianRupee className="w-3.5 h-3.5 text-[var(--color-gold)]" />
             </div>
             <div className="text-xl font-bold text-white font-heading">
               ₹{totalValue.toLocaleString('en-IN')}
             </div>
-            <p className="text-[10px] text-gray-400 mt-0.5">Fair living-wage price</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">{t('catalogue.suggestedFairPrice', 'Fair living-wage price')}</p>
           </div>
 
           <div className="p-3 rounded-xl bg-black/30 border border-[var(--border-glass)]">
@@ -438,7 +440,7 @@ export default function ArtisanCatalogue({
             <div className="text-xl font-bold text-amber-300 font-heading">
               {giCertifiedCount}
             </div>
-            <p className="text-[10px] text-gray-400 mt-0.5">Geographical Indication</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">{t('studio.verifiedGI', 'Geographical Indication')}</p>
           </div>
 
         </div>
@@ -465,7 +467,7 @@ export default function ArtisanCatalogue({
           <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Search by craft title, SKU, or category..."
+            placeholder={t('catalogue.searchPlaceholder', 'Search by craft title, SKU, or category...')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-black/40 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[var(--color-saffron)] transition-colors"
@@ -482,9 +484,9 @@ export default function ArtisanCatalogue({
             onChange={(e) => setStatusFilter(e.target.value)}
             className="bg-black/40 border border-white/10 rounded-xl px-2.5 py-1.5 text-xs text-gray-300 focus:outline-none focus:border-[var(--color-saffron)]"
           >
-            <option value="ALL">All Statuses</option>
-            <option value="ONDC_LIVE">ONDC Live Only</option>
-            <option value="DRAFT">Offline / Drafts</option>
+            <option value="ALL">{t('catalogue.filterAll', 'All Statuses')}</option>
+            <option value="ONDC_LIVE">{t('catalogue.statusLive', 'ONDC Live Only')}</option>
+            <option value="DRAFT">{t('catalogue.statusDraft', 'Offline / Drafts')}</option>
           </select>
 
           {/* Category Filter */}
@@ -495,7 +497,7 @@ export default function ArtisanCatalogue({
             className="bg-black/40 border border-white/10 rounded-xl px-2.5 py-1.5 text-xs text-gray-300 focus:outline-none focus:border-[var(--color-saffron)]"
           >
             {categories.map(cat => (
-              <option key={cat} value={cat}>{cat === 'ALL' ? 'All Categories' : cat}</option>
+              <option key={cat} value={cat}>{cat === 'ALL' ? t('catalogue.allCrafts', 'All Categories') : cat}</option>
             ))}
           </select>
 
@@ -529,7 +531,7 @@ export default function ArtisanCatalogue({
       {filteredProducts.length === 0 ? (
         <div className="glass-panel p-12 text-center">
           <Package className="w-12 h-12 text-gray-500 mx-auto mb-3 animate-pulse" />
-          <h4 className="text-base font-bold text-white mb-1">No Listed Products Found</h4>
+          <h4 className="text-base font-bold text-white mb-1">{t('catalogue.noProductsFound', 'No Listed Products Found')}</h4>
           <p className="text-xs text-gray-400 max-w-sm mx-auto mb-4">
             {searchQuery || selectedCategory !== 'ALL' || statusFilter !== 'ALL'
               ? 'No products matched your search filters. Try clearing your search or category filter.'
@@ -545,7 +547,7 @@ export default function ArtisanCatalogue({
                 }}
                 className="btn-secondary px-3.5 py-1.5 text-xs"
               >
-                Clear Filters
+                {t('common.cancel', 'Clear Filters')}
               </button>
             )}
             <button
@@ -553,7 +555,7 @@ export default function ArtisanCatalogue({
               className="btn-primary px-4 py-1.5 text-xs flex items-center gap-1.5"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Add First Product</span>
+              <span>{t('catalogue.addProduct', 'Add First Product')}</span>
             </button>
           </div>
         </div>
@@ -1402,7 +1404,7 @@ export default function ArtisanCatalogue({
                       className="btn-secondary px-3 py-1.5 text-xs flex items-center gap-1"
                     >
                       <HardDrive className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>Upload from Hard Disk</span>
+                      <span>{t('studio.uploadDisk', 'Upload from Hard Disk')}</span>
                     </button>
                   </div>
                 </div>
@@ -1442,7 +1444,7 @@ export default function ArtisanCatalogue({
 
             {/* Instruction Tip */}
             <p className="text-[11px] text-gray-400 text-center">
-              Position your craft in the center. Ensure good lighting for highest quality marketplace listing.
+              {t('camera.subtitle', 'Position your craft in the center. Ensure good lighting for highest quality marketplace listing.')}
             </p>
 
             {/* Shutter / Capture Button */}
@@ -1452,7 +1454,7 @@ export default function ArtisanCatalogue({
                 onClick={closeSpotCamera}
                 className="btn-secondary px-4 py-2 text-xs"
               >
-                Cancel
+                {t('common.cancel', 'Cancel')}
               </button>
 
               <button
@@ -1461,7 +1463,7 @@ export default function ArtisanCatalogue({
                 className="px-6 py-2.5 rounded-full bg-gradient-to-r from-amber-500 to-[var(--color-terracotta)] text-white font-bold text-xs flex items-center gap-2 shadow-xl hover:scale-105 active:scale-95 transition-all"
               >
                 <Camera className="w-4 h-4" />
-                <span>Click Photo Now (Capture)</span>
+                <span>{t('camera.captureBtn', 'Click Photo Now (Capture)')}</span>
               </button>
             </div>
 
