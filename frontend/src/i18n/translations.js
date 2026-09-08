@@ -57,7 +57,16 @@ export const TRANSLATIONS = {
       useInStudio: 'Proceed to Vision Studio',
       retry: 'Record Again',
       audioStatus: 'Live 16kHz High-Fidelity Audio',
-      trySample: 'Try Sample Prompt'
+      trySample: 'Try Sample Prompt',
+      startMic: 'Tap to Speak (Microphone)',
+      stopMic: 'Stop Speaking',
+      readAloud: 'Listen Aloud',
+      stopAudio: 'Stop Voice',
+      listenExtracted: 'Listen to Understanding',
+      listenStory: 'Listen to Heritage Story',
+      listenPricing: 'Listen to Fair Wage Guidance',
+      realMicActive: 'Live Microphone Active',
+      micError: 'Microphone access required. Please allow microphone in browser.'
     },
     studio: {
       title: 'Edge AI Listing & Photo Studio',
@@ -203,7 +212,16 @@ export const TRANSLATIONS = {
       useInStudio: 'फोटो स्टूडियो में जाएं',
       retry: 'फिर से बोलें',
       audioStatus: 'लाइव 16kHz उच्च गुणवत्ता ऑडियो',
-      trySample: 'नमूना आवाज़ चलाएं'
+      trySample: 'नमूना आवाज़ चलाएं',
+      startMic: 'माइक से बोलें (रिकॉर्डिंग शुरू)',
+      stopMic: 'बोलना समाप्त करें',
+      readAloud: 'आवाज़ में सुनें',
+      stopAudio: 'आवाज़ बंद करें',
+      listenExtracted: 'पहचाने गए विवरण सुनें',
+      listenStory: 'विरासत कहानी सुनें',
+      listenPricing: 'उचित मूल्य सलाह सुनें',
+      realMicActive: 'लाइव माइक्रोफ़ोन सक्रिय है',
+      micError: 'माइक की अनुमति आवश्यक है। कृपया ब्राउज़र में माइक चालू करें।'
     },
     studio: {
       title: 'एज एआई फोटो एवं लिस्टिंग स्टूडियो',

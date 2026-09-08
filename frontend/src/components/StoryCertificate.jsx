@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
-import { Award, QrCode, ShieldCheck, Sparkles, Copy, Check, FileCheck, Share2 } from 'lucide-react';
+import { Award, QrCode, ShieldCheck, Sparkles, Copy, Check, FileCheck, Share2, Volume2, VolumeX } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
+import { useTextToSpeech } from '../hooks/useSpeech';
 
 export default function StoryCertificate({ craft, artisanName = "Ramprasad Prajapati", region = "Gorakhpur / Varanasi, Uttar Pradesh" }) {
+  const { currentLanguage, t } = useLanguage();
+  const { isSpeaking, speak, stop } = useTextToSpeech();
   const [copied, setCopied] = useState(false);
 
   const certId = `CERT-IND-${(craft?.category?.slice(0, 3) || 'ART').toUpperCase()}-2026`;
@@ -67,8 +71,40 @@ export default function StoryCertificate({ craft, artisanName = "Ramprasad Praja
         {/* Main Content & Story */}
         <div className="py-4 space-y-3 text-xs">
           <div>
-            <span className="text-[10px] uppercase text-[var(--color-saffron)] font-bold">Generative Craft Narrative:</span>
-            <p className="text-gray-200 mt-1 leading-relaxed italic bg-black/30 p-3 rounded-xl border border-white/5">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[10px] uppercase text-[var(--color-saffron)] font-bold">Generative Craft Narrative:</span>
+              <button
+                type="button"
+                onClick={() => {
+                  if (isSpeaking) {
+                    stop();
+                  } else {
+                    speak(craftStory, currentLanguage);
+                  }
+                }}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                  isSpeaking
+                    ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 animate-pulse'
+                    : 'bg-amber-500/15 text-[var(--color-gold)] border border-amber-500/30 hover:bg-amber-500/25'
+                }`}
+                title="Listen to story narrative in current language"
+              >
+                {isSpeaking ? (
+                  <>
+                    <VolumeX className="w-3.5 h-3.5 text-rose-400" />
+                    <span>{t('voice.stopAudio', 'Stop Audio')}</span>
+                  </>
+                ) : (
+                  <>
+                    <Volume2 className="w-3.5 h-3.5 text-[var(--color-gold)]" />
+                    <span>{t('voice.listenStory', 'Listen to Heritage Story')}</span>
+                  </>
+                )}
+              </button>
+            </div>
+            <p className={`text-gray-200 leading-relaxed italic bg-black/30 p-3 rounded-xl border transition-all ${
+              isSpeaking ? 'border-[var(--color-gold)]/60 bg-amber-950/20 shadow-lg' : 'border-white/5'
+            }`}>
               "{craftStory}"
             </p>
           </div>

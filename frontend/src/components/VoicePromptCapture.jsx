@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Mic, MicOff, Volume2, Sparkles, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Mic, MicOff, Volume2, VolumeX, Sparkles, CheckCircle2, ArrowRight, Square, AlertCircle, Radio } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import { useSpeechToText, useTextToSpeech } from '../hooks/useSpeech';
 
 const PRESETS = {
   'hi-IN': {
@@ -108,41 +109,75 @@ export default function VoicePromptCapture({ language: propLang, onVoiceExtracte
   const { language: ctxLang, t } = useLanguage();
   const activeLang = propLang || ctxLang || 'hi-IN';
 
-  const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [extractedData, setExtractedData] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const currentPreset = PRESETS[activeLang] || PRESETS['hi-IN'];
 
+  // Text-to-Speech Hook
+  const {
+    isSpeaking,
+    speak,
+    stop: stopSpeaking,
+    isSupported: isTtsSupported
+  } = useTextToSpeech();
+
+  // Speech-to-Text Hook with live volume analysis
+  const {
+    isListening,
+    transcript: sttTranscript,
+    interimTranscript,
+    volumeLevel,
+    error: sttError,
+    isSupported: isSttSupported,
+    startListening,
+    stopListening,
+    resetTranscript
+  } = useSpeechToText({
+    lang: activeLang,
+    onResult: (text, isFinal) => {
+      if (isFinal && text) {
+        setTranscript(prev => (prev ? `${prev} ${text}` : text));
+      }
+    }
+  });
+
+  // Sync preset when active language changes
   useEffect(() => {
     setTranscript(currentPreset.text);
     setExtractedData(null);
+    resetTranscript();
+    if (isListening) {
+      stopListening();
+    }
   }, [activeLang]);
 
-  const handleSimulateRecording = () => {
-    if (isRecording) {
-      setIsRecording(false);
-      return;
+  // Synchronize incoming STT transcript with local editable text
+  useEffect(() => {
+    if (sttTranscript) {
+      setTranscript(sttTranscript);
     }
+  }, [sttTranscript]);
 
-    setIsRecording(true);
+  // Parse natural speech and extract attributes
+  const parseAndExtract = (textToParse) => {
+    const raw = textToParse || transcript || currentPreset.text;
     setIsProcessing(true);
     setExtractedData(null);
 
     setTimeout(() => {
-      setIsRecording(false);
       setIsProcessing(false);
-      
-      const hoursMatch = transcript.match(/(\d+)\s*(hour|घंटे|ঘণ্টা|மணிநேരം|గంటల|ताਸ|ಕಲಾಕೊ|ಗಂಟೆ|മണിക്കൂർ|ଘଣ୍ଟା)/i);
-      const costMatch = transcript.match(/(\d+)\s*(rupee|रुपया|টাকা|ரூபாய்|రూపాయలు|रुपये|રૂપિયા|ರೂಪಾಯಿ|രൂപ|ਰੁਪਏ|ଟଙ୍କା)/i);
-      
+
+      const hoursMatch = raw.match(/(\d+)\s*(hour|hours|घंटे|घंटा|ঘণ্টা|மணிநேரம்|గంటల|तास|કલાક|ಕಲಾಕೊ|ಗಂಟೆ|മണിക്കൂർ|ਘੰਟੇ|ଘଣ୍ଟା)/i);
+      const costMatch = raw.match(/(\d+)\s*(rupee|rupees|रुपया|रुपये|টাকা|ரூபாய்|రూపాయలు|रुपये|રૂપિયા|ರೂಪಾಯಿ|രൂപ|ਰੁਪਏ|ଟଙ୍କା)/i);
+
       const parsedHours = hoursMatch ? parseFloat(hoursMatch[1]) : currentPreset.defaultHours;
       const parsedCost = costMatch ? parseFloat(costMatch[1]) : currentPreset.defaultCost;
 
       const result = {
         language: activeLang,
-        spokenText: transcript,
+        spokenText: raw,
         extracted: {
           craftType: currentPreset.craftType,
           rawMaterialCost: parsedCost,
@@ -156,7 +191,50 @@ export default function VoicePromptCapture({ language: propLang, onVoiceExtracte
       if (onVoiceExtracted) {
         onVoiceExtracted(result);
       }
-    }, 2000);
+    }, 1200);
+  };
+
+  // Toggle Microphone STT
+  const handleToggleListening = async () => {
+    if (isListening) {
+      stopListening();
+      // Auto-extract after stopping speech
+      if (transcript || interimTranscript) {
+        parseAndExtract(transcript + (interimTranscript ? ` ${interimTranscript}` : ''));
+      }
+    } else {
+      resetTranscript();
+      setTranscript('');
+      setExtractedData(null);
+      if (isSpeaking) stopSpeaking();
+      await startListening();
+    }
+  };
+
+  // Text-to-Speech: Read current prompt
+  const handleReadAloud = (text) => {
+    if (isSpeaking) {
+      stopSpeaking();
+    } else {
+      const textToRead = text || transcript || currentPreset.text;
+      speak(textToRead, activeLang);
+    }
+  };
+
+  // Text-to-Speech: Speak parsed understanding
+  const handleSpeakExtracted = () => {
+    if (!extractedData) return;
+    if (isSpeaking) {
+      stopSpeaking();
+      return;
+    }
+    const narrative = (
+      `Understood: Craft style is ${extractedData.craftType}. ` +
+      `Materials used: ${extractedData.material}. ` +
+      `Crafting time: ${extractedData.laborHours} hours. ` +
+      `Raw materials cost: ${extractedData.rawMaterialCost} rupees.`
+    );
+    speak(narrative, activeLang);
   };
 
   return (
@@ -172,23 +250,33 @@ export default function VoicePromptCapture({ language: propLang, onVoiceExtracte
             {t('voice.title', 'Multilingual Voice Input (BHASHINI / Whisper AI)')}
           </h2>
         </div>
-        <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-          Zero Literacy Barrier
-        </span>
+        <div className="flex items-center gap-2">
+          {isListening && (
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center gap-1.5 animate-pulse">
+              <Radio className="w-3 h-3 animate-spin" /> {t('voice.realMicActive', 'Live Microphone Active')}
+            </span>
+          )}
+          <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+            Zero Literacy Barrier
+          </span>
+        </div>
       </div>
 
       <p className="text-xs text-[var(--text-muted)] mb-4">
-        {currentPreset.hint}. {t('voice.subtitle')}
+        {currentPreset.hint}. {t('voice.subtitle', 'Speak naturally in your mother tongue. Digital India BHASHINI Edge AI automatically extracts title, craft style, hours, and materials.')}
       </p>
 
       {/* Voice Prompt Box */}
-      <div className="p-4 rounded-xl bg-black/30 border border-[var(--border-glass)] mb-4 relative">
+      <div className={`p-4 rounded-xl bg-black/30 border transition-all mb-4 relative ${
+        isListening ? 'border-rose-500/60 shadow-lg shadow-rose-950/30' : 'border-[var(--border-glass)]'
+      }`}>
         <div className="flex items-start justify-between gap-2 mb-2">
           <span className="text-[11px] font-semibold text-[var(--color-saffron)] flex items-center gap-1">
-            <Volume2 className="w-3.5 h-3.5" /> {t('voice.audioStatus', 'Live 16kHz High-Fidelity Audio')}
+            <Volume2 className="w-3.5 h-3.5" /> 
+            {isListening ? t('voice.listening', 'Listening in your mother tongue...') : t('voice.audioStatus', 'Live 16kHz High-Fidelity Audio')}
           </span>
           <span className="text-[10px] text-gray-400 font-mono">
-            {activeLang} • BHASHINI AI
+            {activeLang} • BHASHINI Web Speech STT
           </span>
         </div>
         
@@ -197,20 +285,38 @@ export default function VoicePromptCapture({ language: propLang, onVoiceExtracte
           value={transcript}
           onChange={(e) => setTranscript(e.target.value)}
           rows={3}
-          className="w-full bg-transparent text-sm text-gray-200 resize-none border-none outline-none font-sans"
-          placeholder={t('voice.speakPrompt', 'Speak or tap preset below...')}
+          className="w-full bg-transparent text-sm text-gray-200 resize-none border-none outline-none font-sans placeholder-gray-500"
+          placeholder={t('voice.speakPrompt', 'Tap microphone to speak your product description...')}
         />
 
-        {/* Audio Wave Visualizer Simulation */}
-        {isRecording && (
-          <div className="flex items-center justify-center gap-1.5 py-2 my-1">
-            {[35, 70, 45, 90, 60, 100, 50, 80, 40, 65, 30].map((h, i) => (
-              <div
-                key={i}
-                className="w-1 bg-gradient-to-t from-[var(--color-terracotta)] to-[var(--color-saffron)] rounded-full transition-all duration-150 animate-pulse"
-                style={{ height: `${h}%`, minHeight: '12px' }}
-              />
-            ))}
+        {/* Dynamic Decibel Audio Equalizer (Reacts to Real Microphone Volume) */}
+        {isListening && (
+          <div className="flex items-center justify-center gap-1.5 py-2 my-1 bg-black/40 rounded-lg">
+            {[18, 45, 30, 80, 60, 95, 55, 75, 40, 65, 25, 50, 85, 35].map((baseH, i) => {
+              const dynamicHeight = Math.max(12, Math.min(100, Math.round((volumeLevel * 1.2) + (baseH * 0.3))));
+              return (
+                <div
+                  key={i}
+                  className="w-1.5 bg-gradient-to-t from-[var(--color-terracotta)] via-amber-400 to-[var(--color-saffron)] rounded-full transition-all duration-75"
+                  style={{ height: `${dynamicHeight}px` }}
+                />
+              );
+            })}
+          </div>
+        )}
+
+        {/* Live interim text preview */}
+        {interimTranscript && (
+          <p className="text-[11px] text-amber-300/80 italic mt-1 animate-pulse">
+            "{interimTranscript}..."
+          </p>
+        )}
+
+        {/* Microphone Error Notice */}
+        {sttError && (
+          <div className="mt-2 text-xs text-rose-400 flex items-center gap-1 bg-rose-950/40 p-2 rounded-lg border border-rose-500/30">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{sttError}</span>
           </div>
         )}
       </div>
@@ -218,31 +324,62 @@ export default function VoicePromptCapture({ language: propLang, onVoiceExtracte
       {/* Control Buttons */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Real Microphone STT Toggle Button */}
           <button
-            onClick={handleSimulateRecording}
+            type="button"
+            onClick={handleToggleListening}
             disabled={isProcessing}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs transition-all ${
-              isRecording
-                ? 'bg-rose-600 text-white recording-pulse'
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs transition-all shadow-md ${
+              isListening
+                ? 'bg-rose-600 text-white recording-pulse ring-2 ring-rose-400'
                 : 'btn-primary'
             }`}
           >
-            {isRecording ? (
+            {isListening ? (
               <>
                 <MicOff className="w-4 h-4 animate-spin" />
-                <span>{t('voice.listening', 'Listening...')}</span>
+                <span>{t('voice.stopMic', 'Stop Speaking')}</span>
               </>
             ) : (
               <>
                 <Mic className="w-4 h-4" />
-                <span>{t('voice.speakPrompt', 'Tap to Speak')}</span>
+                <span>{t('voice.startMic', 'Tap to Speak (Microphone)')}</span>
               </>
             )}
           </button>
 
+          {/* Text-to-Speech (TTS) Read Aloud Button */}
           <button
-            onClick={() => setTranscript(currentPreset.text)}
+            type="button"
+            onClick={() => handleReadAloud()}
+            className={`px-3 py-2 text-xs rounded-xl flex items-center gap-1.5 transition-all border ${
+              isSpeaking
+                ? 'bg-blue-600/30 text-blue-300 border-blue-400/50 animate-pulse'
+                : 'btn-secondary text-gray-200'
+            }`}
+            title="Listen to this text spoken aloud using browser TTS"
+          >
+            {isSpeaking ? (
+              <>
+                <Square className="w-3.5 h-3.5 text-rose-400" />
+                <span>{t('voice.stopAudio', 'Stop Voice')}</span>
+              </>
+            ) : (
+              <>
+                <Volume2 className="w-3.5 h-3.5 text-blue-400" />
+                <span>{t('voice.readAloud', 'Listen Aloud')}</span>
+              </>
+            )}
+          </button>
+
+          {/* Preset Sample Prompt Loader */}
+          <button
+            type="button"
+            onClick={() => {
+              setTranscript(currentPreset.text);
+              parseAndExtract(currentPreset.text);
+            }}
             className="btn-secondary px-3 py-2 text-xs"
             title="Load sample vernacular sentence"
           >
@@ -260,11 +397,22 @@ export default function VoicePromptCapture({ language: propLang, onVoiceExtracte
       {/* Extracted Structured Metadata Display */}
       {extractedData && (
         <div className="mt-4 p-3 rounded-xl bg-emerald-950/30 border border-emerald-500/30 animate-fadeIn">
-          <div className="flex items-center justify-between text-xs text-emerald-400 font-semibold mb-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-emerald-400 font-semibold mb-2">
             <span className="flex items-center gap-1">
               <CheckCircle2 className="w-3.5 h-3.5" /> {t('voice.analyzing', 'Extracting product attributes...')}
             </span>
-            <span className="text-[10px] text-emerald-300 font-mono">Accuracy: {extractedData.confidence}</span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleSpeakExtracted}
+                className="px-2 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 text-[11px] font-medium flex items-center gap-1 border border-emerald-500/30"
+                title="Listen to understood attributes spoken aloud"
+              >
+                <Volume2 className="w-3 h-3 text-emerald-400" />
+                <span>{t('voice.listenExtracted', 'Listen to Understanding')}</span>
+              </button>
+              <span className="text-[10px] text-emerald-300 font-mono">Accuracy: {extractedData.confidence}</span>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">

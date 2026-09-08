@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { IndianRupee, TrendingUp, ShieldAlert, Sparkles, Scale, Info } from 'lucide-react';
+import { IndianRupee, TrendingUp, ShieldAlert, Sparkles, Scale, Info, Volume2, VolumeX } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import { useTextToSpeech } from '../hooks/useSpeech';
 
 const SKILL_RATES = {
   'Apprentice': { rate: 90, label: 'Apprentice (प्रशिक्षु - ₹90/hr)' },
@@ -9,7 +10,8 @@ const SKILL_RATES = {
 };
 
 export default function PricingCalculator({ initialCost = 160, initialHours = 9, onPriceCalculated }) {
-  const { t } = useLanguage();
+  const { currentLanguage, t } = useLanguage();
+  const { isSpeaking, speak, stop } = useTextToSpeech();
   const [rawCost, setRawCost] = useState(initialCost);
   const [laborHours, setLaborHours] = useState(initialHours);
   const [skillLevel, setSkillLevel] = useState('Master Artisan');
@@ -32,6 +34,19 @@ export default function PricingCalculator({ initialCost = 160, initialHours = 9,
   const middlemanArtisanPayout = Math.round(rawCost + (laborHours * 45));
   const middlemanRetailPrice = Math.round(middlemanArtisanPayout * 2.3);
   const artisanExtraGain = Math.round(((fairMarketPrice - middlemanArtisanPayout) / Math.max(middlemanArtisanPayout, 1)) * 100);
+
+  const handlePricingSpeech = () => {
+    if (isSpeaking) {
+      stop();
+      return;
+    }
+    const pricingNarration = (
+      `Fair trade living wage pricing recommendation: The suggested ONDC direct market price is ${fairMarketPrice} rupees. ` +
+      `This covers ${rawCost} rupees for raw materials, and ${totalLaborCost} rupees for ${laborHours} hours of skilled craft work at ${hourlyRate} rupees per hour. ` +
+      `Direct listing provides you with a profit margin of ${marginPercent} percent, which is ${artisanExtraGain} percent higher than traditional middleman trader payouts.`
+    );
+    speak(pricingNarration, currentLanguage);
+  };
 
   useEffect(() => {
     if (onPriceCalculated) {
@@ -152,7 +167,31 @@ export default function PricingCalculator({ initialCost = 160, initialHours = 9,
               <span className="flex items-center gap-1 text-[var(--color-saffron)] font-semibold">
                 <Scale className="w-3.5 h-3.5" /> Fair Trade Living Wage Breakdown
               </span>
-              <span className="text-[10px] text-gray-400 font-mono">Algorithm v1.4</span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handlePricingSpeech}
+                  className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-semibold transition-all ${
+                    isSpeaking
+                      ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 animate-pulse'
+                      : 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25'
+                  }`}
+                  title="Listen to living wage calculation aloud"
+                >
+                  {isSpeaking ? (
+                    <>
+                      <VolumeX className="w-3.5 h-3.5 text-rose-400" />
+                      <span>{t('voice.stopAudio', 'Stop Audio')}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>{t('voice.listenPricing', 'Listen to Advice')}</span>
+                    </>
+                  )}
+                </button>
+                <span className="text-[10px] text-gray-400 font-mono">Algorithm v1.4</span>
+              </div>
             </div>
 
             <div className="space-y-2 py-3 text-xs">
