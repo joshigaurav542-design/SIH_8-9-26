@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Camera, Scan, Award, CheckCircle, ShieldAlert, Sparkles, RefreshCw, Upload, Image as ImageIcon } from 'lucide-react';
 
 const CRAFT_SAMPLES = [
