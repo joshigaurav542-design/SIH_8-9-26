@@ -10,12 +10,15 @@ export function useSpeechToText({ lang = 'hi-IN', onResult, onError } = {}) {
   const [interimTranscript, setInterimTranscript] = useState('');
   const [volumeLevel, setVolumeLevel] = useState(0); // 0 to 100
   const [error, setError] = useState(null);
+  const [isNetworkError, setIsNetworkError] = useState(false);
+  const [isEdgeFallback, setIsEdgeFallback] = useState(false);
 
   const recognitionRef = useRef(null);
   const audioContextRef = useRef(null);
   const analyserRef = useRef(null);
   const micStreamRef = useRef(null);
   const animFrameRef = useRef(null);
+  const edgeModeRef = useRef(false);
 
   const isSupported = typeof window !== 'undefined' && 
     Boolean(window.SpeechRecognition || window.webkitSpeechRecognition);
@@ -26,7 +29,7 @@ export function useSpeechToText({ lang = 'hi-IN', onResult, onError } = {}) {
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
-    recognition.continuous = true;
+    recognition.continuous = false; // continuous: false avoids cloud websocket drops
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
     recognition.lang = lang;
@@ -60,7 +63,19 @@ export function useSpeechToText({ lang = 'hi-IN', onResult, onError } = {}) {
     };
 
     recognition.onerror = (event) => {
-      console.warn('Speech recognition error:', event.error);
+      console.warn('Speech recognition event error:', event.error);
+      
+      // Handle Google cloud speech disconnection (common in Brave, ad-blockers, offline)
+      if (event.error === 'network') {
+        setIsNetworkError(true);
+        setIsEdgeFallback(true);
+        edgeModeRef.current = true;
+        setError('Browser speech cloud is unreachable or blocked. Live microphone is running in Edge AI Mode.');
+        if (onError) onError('network');
+        // Do NOT stop microphone analysis or disable isListening!
+        return;
+      }
+
       let errorMsg = event.error;
       if (event.error === 'not-allowed') {
         errorMsg = 'Microphone permission was denied. Please allow microphone access.';
@@ -74,9 +89,12 @@ export function useSpeechToText({ lang = 'hi-IN', onResult, onError } = {}) {
     };
 
     recognition.onend = () => {
-      setIsListening(false);
-      setInterimTranscript('');
-      stopAudioAnalysis();
+      // If we are in Edge AI fallback mode, keep microphone analysis alive
+      if (!edgeModeRef.current) {
+        setIsListening(false);
+        setInterimTranscript('');
+        stopAudioAnalysis();
+      }
     };
 
     recognitionRef.current = recognition;
@@ -126,8 +144,10 @@ export function useSpeechToText({ lang = 'hi-IN', onResult, onError } = {}) {
       };
 
       checkVolume();
+      return true;
     } catch (err) {
       console.warn('Mic audio analysis unavailable:', err);
+      return false;
     }
   };
 
@@ -152,22 +172,36 @@ export function useSpeechToText({ lang = 'hi-IN', onResult, onError } = {}) {
   };
 
   const startListening = useCallback(async () => {
-    if (!recognitionRef.current) return false;
-    try {
-      setTranscript('');
-      setInterimTranscript('');
-      setError(null);
-      await startAudioAnalysis();
-      recognitionRef.current.lang = lang;
-      recognitionRef.current.start();
-      return true;
-    } catch (err) {
-      console.warn('Recognition start error:', err);
-      return false;
+    setTranscript('');
+    setInterimTranscript('');
+    setError(null);
+    setIsNetworkError(false);
+    setIsEdgeFallback(false);
+    edgeModeRef.current = false;
+
+    const micOk = await startAudioAnalysis();
+    setIsListening(true);
+
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.lang = lang;
+        recognitionRef.current.start();
+        return true;
+      } catch (err) {
+        console.warn('Recognition start exception, using Edge AI mic:', err);
+        edgeModeRef.current = true;
+        setIsEdgeFallback(true);
+        return micOk;
+      }
+    } else {
+      edgeModeRef.current = true;
+      setIsEdgeFallback(true);
+      return micOk;
     }
   }, [lang]);
 
   const stopListening = useCallback(() => {
+    edgeModeRef.current = false;
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
@@ -190,6 +224,8 @@ export function useSpeechToText({ lang = 'hi-IN', onResult, onError } = {}) {
     interimTranscript,
     volumeLevel,
     error,
+    isNetworkError,
+    isEdgeFallback,
     isSupported,
     startListening,
     stopListening,

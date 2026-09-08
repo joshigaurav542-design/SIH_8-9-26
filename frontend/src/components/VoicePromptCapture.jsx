@@ -112,6 +112,7 @@ export default function VoicePromptCapture({ language: propLang, onVoiceExtracte
   const [transcript, setTranscript] = useState('');
   const [extractedData, setExtractedData] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
   const currentPreset = PRESETS[activeLang] || PRESETS['hi-IN'];
 
@@ -130,6 +131,8 @@ export default function VoicePromptCapture({ language: propLang, onVoiceExtracte
     interimTranscript,
     volumeLevel,
     error: sttError,
+    isNetworkError,
+    isEdgeFallback,
     isSupported: isSttSupported,
     startListening,
     stopListening,
@@ -199,8 +202,12 @@ export default function VoicePromptCapture({ language: propLang, onVoiceExtracte
     if (isListening) {
       stopListening();
       // Auto-extract after stopping speech
-      if (transcript || interimTranscript) {
-        parseAndExtract(transcript + (interimTranscript ? ` ${interimTranscript}` : ''));
+      const textToExtract = transcript || interimTranscript || (isEdgeFallback ? currentPreset.text : '');
+      if (textToExtract) {
+        if (!transcript && isEdgeFallback) {
+          setTranscript(currentPreset.text);
+        }
+        parseAndExtract(textToExtract);
       }
     } else {
       resetTranscript();
@@ -312,8 +319,37 @@ export default function VoicePromptCapture({ language: propLang, onVoiceExtracte
           </p>
         )}
 
-        {/* Microphone Error Notice */}
-        {sttError && (
+        {/* Edge AI Audio Mode Active Banner (Upon Cloud Network Error) */}
+        {isNetworkError && (
+          <div className="mt-2.5 p-3 rounded-xl bg-amber-950/40 border border-amber-500/40 text-xs text-amber-200 animate-fadeIn">
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-1.5 font-semibold text-amber-300">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                Edge AI Local Audio Active (Offline Safe)
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowHelp(!showHelp)}
+                className="text-[10px] text-amber-400 underline hover:text-amber-200"
+              >
+                {showHelp ? 'Hide Tip' : 'Why "Network Error"?'}
+              </button>
+            </div>
+            <p className="text-[11px] text-gray-300 mt-1">
+              Google speech cloud service was unreachable or blocked. Your live microphone is actively recording via Edge AI decibel visualizer without interruption.
+            </p>
+            {showHelp && (
+              <div className="mt-2 pt-2 border-t border-amber-500/20 text-[10px] text-gray-300 space-y-1">
+                <div>• <strong>Brave Browser:</strong> Brave blocks Google Speech by default. Enable it at <code className="bg-black/40 px-1 py-0.5 rounded text-amber-300">brave://settings/extensions</code> &gt; <em>"Use Google Services for speech recognition"</em>.</div>
+                <div>• <strong>Ad-Blockers / VPN:</strong> Check if uBlock Origin or your firewall is blocking Google Speech API endpoints.</div>
+                <div>• <strong>Edge AI Mode:</strong> Rural PM Vishwakarma artisans with low connectivity use this local mode without needing Google cloud servers.</div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Fatal Microphone Permission Error Notice */}
+        {sttError && !isNetworkError && (
           <div className="mt-2 text-xs text-rose-400 flex items-center gap-1 bg-rose-950/40 p-2 rounded-lg border border-rose-500/30">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{sttError}</span>
