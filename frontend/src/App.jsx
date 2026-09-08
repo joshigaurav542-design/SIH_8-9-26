@@ -176,10 +176,11 @@ export default function App() {
   };
 
   const steps = [
-    { id: 1, label: 'Voice Prompt', hint: 'Vernacular Speech' },
-    { id: 2, label: 'Edge AI Vision', hint: 'Camera & Hard Drive' },
-    { id: 3, label: 'ONDC Publish', hint: 'Direct Market Sync' },
-    { id: 4, label: 'My Catalogue', hint: `${catalogueProducts.length} Items & Pricing` }
+    { id: 1, label: 'Multilingual Speech', hint: 'BHASHINI & Whisper AI' },
+    { id: 2, label: 'Vision Quality Rating', hint: 'INT8 YOLOv8 & OpenCV' },
+    { id: 3, label: 'Heritage Valuation', hint: 'PM Vishwakarma Matrix' },
+    { id: 4, label: 'Market Distribution', hint: 'Beckn Protocol v1.2' },
+    { id: 5, label: 'My Catalogue', hint: `${catalogueProducts.length} Items & Pricing` }
   ];
 
   return (
@@ -216,9 +217,9 @@ export default function App() {
             {/* Studio vs Catalogue Switcher */}
             <div className="flex items-center glass-pill p-1">
               <button
-                onClick={() => { if (activeStep === 4) setActiveStep(1); }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                  activeStep !== 4
+                onClick={() => { if (activeStep === 5) setActiveStep(1); }}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                  activeStep !== 5
                     ? 'bg-[var(--color-terracotta)] text-white shadow-md'
                     : 'text-gray-400 hover:text-white'
                 }`}
@@ -227,10 +228,10 @@ export default function App() {
                 <span>AI Listing Studio</span>
               </button>
               <button
-                onClick={() => setActiveStep(4)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                  activeStep === 4
-                    ? 'bg-amber-500 text-black shadow-md'
+                onClick={() => setActiveStep(5)}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                  activeStep === 5
+                    ? 'bg-amber-500 text-black shadow-md font-bold'
                     : 'text-gray-400 hover:text-white'
                 }`}
               >
@@ -264,31 +265,26 @@ export default function App() {
           </div>
         </div>
 
-        {/* 4-Step Interactive Workflow Progress Navigation */}
-        <div className="glass-panel p-2 mb-6 overflow-x-auto">
-          <div className="flex items-center justify-between min-w-[500px]">
+        {/* 5-Step Interactive Workflow Progress Navigation from picture */}
+        <div className="mb-6 overflow-x-auto pb-1">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 min-w-[660px]">
             {steps.map((step) => (
               <button
                 key={step.id}
                 onClick={() => setActiveStep(step.id)}
-                className={`flex-1 flex items-center gap-2 p-2.5 rounded-xl text-left transition-all ${
+                className={`p-3.5 rounded-2xl text-left transition-all duration-200 ${
                   activeStep === step.id
-                    ? 'bg-white/10 text-white border border-[var(--color-saffron)]/40'
-                    : 'text-gray-400 hover:text-gray-200'
+                    ? 'bg-[#0D1424] border-2 border-amber-500 shadow-[0_0_18px_rgba(245,158,11,0.28)]'
+                    : 'bg-[#0C1220] border border-white/5 hover:border-white/15'
                 }`}
               >
-                <div
-                  className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs ${
-                    activeStep === step.id
-                      ? 'bg-[var(--color-saffron)] text-black'
-                      : 'bg-white/5 text-gray-400'
-                  }`}
-                >
-                  {step.id}
+                <div className={`text-xs sm:text-sm font-bold truncate leading-snug ${
+                  activeStep === step.id ? 'text-white' : 'text-slate-200'
+                }`}>
+                  {step.label}
                 </div>
-                <div className="truncate">
-                  <div className="text-xs font-bold leading-tight truncate">{step.label}</div>
-                  <div className="text-[10px] text-gray-400 truncate">{step.hint}</div>
+                <div className="text-[11px] text-slate-400 truncate mt-1">
+                  {step.hint}
                 </div>
               </button>
             ))}
@@ -343,17 +339,26 @@ export default function App() {
                 </div>
               )}
               {activeStep === 3 && (
+                <div className="p-4 rounded-2xl bg-[#090e1b] border border-slate-800">
+                  <PricingCalculator
+                    initialCost={pricing.rawCost}
+                    initialHours={pricing.laborHours}
+                    onPriceCalculated={setPricing}
+                  />
+                </div>
+              )}
+              {activeStep === 4 && (
                 <>
                   <ONDCPublishModal
                     product={scannedCraft}
                     isOnline={isOnline}
                     onPublishSuccess={handlePublishSuccess}
-                    onViewCatalogue={() => setActiveStep(4)}
+                    onViewCatalogue={() => setActiveStep(5)}
                   />
                   <StoryCertificate craft={scannedCraft} />
                 </>
               )}
-              {activeStep === 4 && (
+              {activeStep === 5 && (
                 <ArtisanCatalogue
                   products={catalogueProducts}
                   onAddProduct={handleAddProduct}
@@ -378,10 +383,10 @@ export default function App() {
               >
                 Previous
               </button>
-              <span className="text-gray-500 font-mono text-[11px]">Step {activeStep} of 4</span>
+              <span className="text-gray-500 font-mono text-[11px]">Step {activeStep} of 5</span>
               <button
-                disabled={activeStep === 4}
-                onClick={() => setActiveStep(prev => Math.min(4, prev + 1))}
+                disabled={activeStep === 5}
+                onClick={() => setActiveStep(prev => Math.min(5, prev + 1))}
                 className="text-[var(--color-saffron)] font-bold disabled:opacity-30 flex items-center gap-1"
               >
                 <span>Next</span>
@@ -447,18 +452,28 @@ export default function App() {
             )}
 
             {activeStep === 3 && (
+              <div className="max-w-3xl mx-auto">
+                <PricingCalculator
+                  initialCost={pricing.rawCost}
+                  initialHours={pricing.laborHours}
+                  onPriceCalculated={setPricing}
+                />
+              </div>
+            )}
+
+            {activeStep === 4 && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <ONDCPublishModal
                   product={scannedCraft}
                   isOnline={isOnline}
                   onPublishSuccess={handlePublishSuccess}
-                  onViewCatalogue={() => setActiveStep(4)}
+                  onViewCatalogue={() => setActiveStep(5)}
                 />
                 <StoryCertificate craft={scannedCraft} />
               </div>
             )}
 
-            {activeStep === 4 && (
+            {activeStep === 5 && (
               <ArtisanCatalogue
                 products={catalogueProducts}
                 onAddProduct={handleAddProduct}
