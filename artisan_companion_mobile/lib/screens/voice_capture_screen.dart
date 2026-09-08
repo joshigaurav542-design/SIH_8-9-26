@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../services/api_service.dart';
 
 class VoiceCaptureScreen extends StatefulWidget {
   final String language;
@@ -16,7 +15,6 @@ class VoiceCaptureScreen extends StatefulWidget {
 }
 
 class _VoiceCaptureScreenState extends State<VoiceCaptureScreen> with SingleTickerProviderStateMixin {
-  final ApiService _apiService = ApiService();
   bool _isRecording = false;
   bool _isProcessing = false;
   String _transcript = '';
