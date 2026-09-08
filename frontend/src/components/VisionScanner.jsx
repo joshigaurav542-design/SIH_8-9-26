@@ -230,8 +230,8 @@ export default function VisionScanner({ onScanComplete }) {
             key={sample.id}
             onClick={() => handleTriggerScan(sample)}
             className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${selectedCraft.id === sample.id
-                ? 'bg-[var(--color-terracotta)] text-white shadow-sm'
-                : 'glass-pill text-gray-300 hover:text-white'
+              ? 'bg-[var(--color-terracotta)] text-white shadow-sm'
+              : 'glass-pill text-gray-300 hover:text-white'
               }`}
           >
             {sample.name.split(' ')[0]} {sample.name.split(' ')[1]}
@@ -246,8 +246,8 @@ export default function VisionScanner({ onScanComplete }) {
             else startCamera();
           }}
           className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm ${isCameraActive
-              ? 'bg-rose-600/30 text-rose-300 border border-rose-500/50'
-              : 'bg-amber-600/30 hover:bg-amber-600/50 text-amber-300 border border-amber-500/40'
+            ? 'bg-rose-600/30 text-rose-300 border border-rose-500/50'
+            : 'bg-amber-600/30 hover:bg-amber-600/50 text-amber-300 border border-amber-500/40'
             }`}
           title="Open your device camera to scan craft"
         >

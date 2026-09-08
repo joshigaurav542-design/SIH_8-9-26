@@ -5,8 +5,11 @@ Allows non-literate rural artisans to speak freely in regional languages (Hindi,
 and automatically extracts structured product attributes (title, materials, hours, costs).
 """
 
+import os
+import json
 import re
-from typing import Dict, Any
+from typing import Dict, Any, Optional
+from app.core.config import settings
 
 VERNACULAR_SAMPLE_PROMPTS = {
     "hi-IN": {
