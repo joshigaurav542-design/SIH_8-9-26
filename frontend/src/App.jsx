@@ -17,6 +17,7 @@ import StoryCertificate from './components/StoryCertificate';
 import ONDCPublishModal from './components/ONDCPublishModal';
 import NationalImpactMetrics from './components/NationalImpactMetrics';
 import ArtisanCatalogue, { INITIAL_CATALOGUE } from './components/ArtisanCatalogue';
+import OfflineSyncQueue from './components/OfflineSyncQueue';
 
 export default function App() {
   const { language, setLanguage, t } = useLanguage();

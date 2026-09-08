@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { INITIAL_CATALOGUE, getSuggestedPrice } from '../data/catalogueData';
 import OfflineSyncQueue from './OfflineSyncQueue';
+import PricingCalculator from './PricingCalculator';
 import { useLanguage } from '../context/LanguageContext';
 
 export { INITIAL_CATALOGUE, getSuggestedPrice };
