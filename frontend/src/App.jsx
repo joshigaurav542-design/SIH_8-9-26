@@ -146,7 +146,36 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col justify-between pb-10">
-      
+
+      {/* ── Animated Moving Background ── */}
+      <div id="bg-canvas" aria-hidden="true">
+        {/* Drifting mesh grid */}
+        <div className="bg-grid" />
+
+        {/* Gradient orbs */}
+        <div className="bg-orb bg-orb-1" />
+        <div className="bg-orb bg-orb-2" />
+        <div className="bg-orb bg-orb-3" />
+        <div className="bg-orb bg-orb-4" />
+        <div className="bg-orb bg-orb-5" />
+
+        {/* Twinkling stars */}
+        <div className="bg-star" /><div className="bg-star" /><div className="bg-star" />
+        <div className="bg-star" /><div className="bg-star" /><div className="bg-star" />
+        <div className="bg-star" /><div className="bg-star" /><div className="bg-star" />
+        <div className="bg-star" /><div className="bg-star" /><div className="bg-star" />
+
+        {/* Rising glow particles */}
+        <div className="bg-particle" /><div className="bg-particle" /><div className="bg-particle" />
+        <div className="bg-particle" /><div className="bg-particle" /><div className="bg-particle" />
+        <div className="bg-particle" /><div className="bg-particle" /><div className="bg-particle" />
+        <div className="bg-particle" /><div className="bg-particle" /><div className="bg-particle" />
+        <div className="bg-particle" /><div className="bg-particle" /><div className="bg-particle" />
+
+        {/* Film grain / noise overlay */}
+        <div className="bg-noise" />
+      </div>
+
       {/* Navigation Header */}
       <Navbar
         selectedLang={selectedLang}
@@ -266,7 +295,11 @@ export default function App() {
             
             <div className="space-y-4 max-h-[720px] overflow-y-auto pr-1">
               {activeStep === 1 && (
-                <VoicePromptCapture language={selectedLang} onVoiceExtracted={handleVoiceExtracted} />
+                <VoicePromptCapture
+                  language={selectedLang}
+                  onLanguageChange={setSelectedLang}
+                  onVoiceExtracted={handleVoiceExtracted}
+                />
               )}
               {activeStep === 2 && (
                 <div className="space-y-3">
@@ -358,7 +391,11 @@ export default function App() {
             {activeStep === 1 && (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2">
-                  <VoicePromptCapture language={selectedLang} onVoiceExtracted={handleVoiceExtracted} />
+                  <VoicePromptCapture
+                    language={selectedLang}
+                    onLanguageChange={setSelectedLang}
+                    onVoiceExtracted={handleVoiceExtracted}
+                  />
                 </div>
                 <div>
                   <OfflineSyncQueue isOnline={isOnline} />

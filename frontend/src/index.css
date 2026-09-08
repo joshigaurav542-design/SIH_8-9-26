@@ -31,12 +31,199 @@
 }
 
 body {
-  background: radial-gradient(circle at 15% 15%, #1A243D 0%, #0B0F19 100%);
+  background: #0B0F19;
   color: var(--text-main);
   font-family: var(--font-body);
   min-height: 100vh;
   overflow-x: hidden;
   line-height: 1.5;
+}
+
+/* =============================================
+   ANIMATED MOVING BACKGROUND SYSTEM
+   ============================================= */
+
+/* Keyframes */
+@keyframes orb-float-1 {
+  0%   { transform: translate(0px, 0px) scale(1); }
+  25%  { transform: translate(80px, -60px) scale(1.12); }
+  50%  { transform: translate(160px, 40px) scale(0.92); }
+  75%  { transform: translate(60px, 100px) scale(1.08); }
+  100% { transform: translate(0px, 0px) scale(1); }
+}
+
+@keyframes orb-float-2 {
+  0%   { transform: translate(0px, 0px) scale(1); }
+  33%  { transform: translate(-100px, 80px) scale(1.15); }
+  66%  { transform: translate(60px, -90px) scale(0.88); }
+  100% { transform: translate(0px, 0px) scale(1); }
+}
+
+@keyframes orb-float-3 {
+  0%   { transform: translate(0px, 0px) scale(1); }
+  20%  { transform: translate(50px, 70px) scale(1.1); }
+  40%  { transform: translate(-70px, 30px) scale(0.9); }
+  60%  { transform: translate(-40px, -60px) scale(1.05); }
+  80%  { transform: translate(90px, -20px) scale(0.95); }
+  100% { transform: translate(0px, 0px) scale(1); }
+}
+
+@keyframes grid-drift {
+  0%   { transform: translate(0px, 0px); }
+  100% { transform: translate(60px, 60px); }
+}
+
+@keyframes particle-rise {
+  0%   { transform: translateY(0px) translateX(0px); opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 0.6; }
+  100% { transform: translateY(-100vh) translateX(30px); opacity: 0; }
+}
+
+@keyframes star-twinkle {
+  0%, 100% { opacity: 0.2; transform: scale(1); }
+  50%       { opacity: 0.9; transform: scale(1.4); }
+}
+
+@keyframes noise-shift {
+  0%   { background-position: 0% 0%; }
+  100% { background-position: 200% 200%; }
+}
+
+/* Root wrapper */
+#bg-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 20% 10%, #1A243D 0%, #0B0F19 60%, #060A12 100%);
+}
+
+/* Gradient orbs */
+.bg-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  mix-blend-mode: screen;
+  will-change: transform;
+}
+
+.bg-orb-1 {
+  width: 700px;
+  height: 700px;
+  top: -15%;
+  left: -10%;
+  background: radial-gradient(circle, rgba(224,86,56,0.22) 0%, rgba(224,86,56,0.06) 55%, transparent 75%);
+  animation: orb-float-1 22s ease-in-out infinite;
+}
+
+.bg-orb-2 {
+  width: 600px;
+  height: 600px;
+  bottom: -10%;
+  right: -8%;
+  background: radial-gradient(circle, rgba(243,156,18,0.2) 0%, rgba(243,156,18,0.05) 55%, transparent 75%);
+  animation: orb-float-2 28s ease-in-out infinite;
+}
+
+.bg-orb-3 {
+  width: 500px;
+  height: 500px;
+  top: 35%;
+  left: 40%;
+  background: radial-gradient(circle, rgba(99,102,241,0.15) 0%, rgba(99,102,241,0.04) 55%, transparent 75%);
+  animation: orb-float-3 18s ease-in-out infinite;
+}
+
+.bg-orb-4 {
+  width: 350px;
+  height: 350px;
+  top: 60%;
+  left: 10%;
+  background: radial-gradient(circle, rgba(212,175,55,0.14) 0%, rgba(212,175,55,0.04) 55%, transparent 75%);
+  animation: orb-float-1 32s ease-in-out infinite reverse;
+}
+
+.bg-orb-5 {
+  width: 280px;
+  height: 280px;
+  top: 10%;
+  right: 20%;
+  background: radial-gradient(circle, rgba(16,185,129,0.12) 0%, rgba(16,185,129,0.03) 55%, transparent 75%);
+  animation: orb-float-2 24s ease-in-out infinite reverse;
+}
+
+/* Mesh grid */
+.bg-grid {
+  position: absolute;
+  inset: -60px;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+  background-size: 60px 60px;
+  animation: grid-drift 20s linear infinite;
+}
+
+/* Floating particles */
+.bg-particle {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--color-saffron);
+  box-shadow: 0 0 6px var(--color-saffron);
+  will-change: transform, opacity;
+  animation: particle-rise linear infinite;
+}
+
+.bg-particle:nth-child(1)  { left: 8%;  bottom: 0; animation-duration: 9s;  animation-delay: 0s;    width:2px; height:2px; background: var(--color-terracotta); box-shadow: 0 0 5px var(--color-terracotta); }
+.bg-particle:nth-child(2)  { left: 16%; bottom: 0; animation-duration: 12s; animation-delay: 1.5s;  }
+.bg-particle:nth-child(3)  { left: 24%; bottom: 0; animation-duration: 8s;  animation-delay: 3s;    width:4px; height:4px; }
+.bg-particle:nth-child(4)  { left: 33%; bottom: 0; animation-duration: 14s; animation-delay: 0.7s;  background: var(--color-gold); box-shadow: 0 0 6px var(--color-gold); }
+.bg-particle:nth-child(5)  { left: 42%; bottom: 0; animation-duration: 10s; animation-delay: 2.2s;  }
+.bg-particle:nth-child(6)  { left: 52%; bottom: 0; animation-duration: 7s;  animation-delay: 4s;    background: var(--color-emerald); box-shadow: 0 0 5px var(--color-emerald); width:2px; height:2px; }
+.bg-particle:nth-child(7)  { left: 60%; bottom: 0; animation-duration: 13s; animation-delay: 1s;    }
+.bg-particle:nth-child(8)  { left: 70%; bottom: 0; animation-duration: 9s;  animation-delay: 5s;    background: var(--color-terracotta); box-shadow: 0 0 5px var(--color-terracotta); }
+.bg-particle:nth-child(9)  { left: 80%; bottom: 0; animation-duration: 11s; animation-delay: 2s;    width:4px; height:4px; background: var(--color-gold); box-shadow: 0 0 7px var(--color-gold); }
+.bg-particle:nth-child(10) { left: 90%; bottom: 0; animation-duration: 8s;  animation-delay: 6s;    }
+.bg-particle:nth-child(11) { left: 4%;  bottom: 0; animation-duration: 15s; animation-delay: 3.5s;  }
+.bg-particle:nth-child(12) { left: 48%; bottom: 0; animation-duration: 6s;  animation-delay: 1.2s;  background: var(--color-indigo-accent); box-shadow: 0 0 5px var(--color-indigo-accent); }
+.bg-particle:nth-child(13) { left: 75%; bottom: 0; animation-duration: 10s; animation-delay: 7s;    width:2px; height:2px; }
+.bg-particle:nth-child(14) { left: 36%; bottom: 0; animation-duration: 16s; animation-delay: 0.4s;  background: var(--color-terracotta); box-shadow: 0 0 5px var(--color-terracotta); }
+.bg-particle:nth-child(15) { left: 93%; bottom: 0; animation-duration: 11s; animation-delay: 4.5s;  background: var(--color-gold); box-shadow: 0 0 6px var(--color-gold); }
+
+/* Star field */
+.bg-star {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.7);
+  animation: star-twinkle ease-in-out infinite;
+}
+
+.bg-star:nth-child(1)  { top:5%;  left:10%; animation-duration:3.1s; animation-delay:0s;    }
+.bg-star:nth-child(2)  { top:12%; left:28%; animation-duration:4.2s; animation-delay:0.8s;  width:3px;height:3px; }
+.bg-star:nth-child(3)  { top:22%; left:55%; animation-duration:2.7s; animation-delay:1.4s;  }
+.bg-star:nth-child(4)  { top:8%;  left:72%; animation-duration:5s;   animation-delay:0.3s;  }
+.bg-star:nth-child(5)  { top:35%; left:88%; animation-duration:3.6s; animation-delay:2.1s;  width:3px;height:3px; }
+.bg-star:nth-child(6)  { top:45%; left:15%; animation-duration:4.8s; animation-delay:1s;    }
+.bg-star:nth-child(7)  { top:55%; left:42%; animation-duration:3.3s; animation-delay:3s;    }
+.bg-star:nth-child(8)  { top:65%; left:68%; animation-duration:5.5s; animation-delay:0.5s;  width:3px;height:3px; }
+.bg-star:nth-child(9)  { top:18%; left:92%; animation-duration:2.9s; animation-delay:2.5s;  }
+.bg-star:nth-child(10) { top:78%; left:5%;  animation-duration:4.1s; animation-delay:1.7s;  }
+.bg-star:nth-child(11) { top:88%; left:35%; animation-duration:3.8s; animation-delay:0.9s;  }
+.bg-star:nth-child(12) { top:72%; left:82%; animation-duration:4.4s; animation-delay:3.2s;  width:3px;height:3px; }
+
+/* Noise texture overlay */
+.bg-noise {
+  position: absolute;
+  inset: 0;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+  animation: noise-shift 8s linear infinite;
 }
 
 h1, h2, h3, h4, .font-heading {

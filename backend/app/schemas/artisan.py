@@ -69,7 +69,6 @@ class AuthenticityCertificateSchema(BaseModel):
     qr_payload: str
     trust_badge: str
 
-# --- Product Cataloging & ONDC ---
 class ProductCreate(BaseModel):
     title: str
     description: Optional[str] = None
@@ -85,6 +84,41 @@ class ProductCreate(BaseModel):
     skill_level: str = "Master Artisan"
     price: float
     image_url: Optional[str] = None
+    gi_certified: Optional[bool] = True
+    ondc_published: Optional[bool] = False
+
+class ProductUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    category: Optional[str] = None
+    craft_style: Optional[str] = None
+    material: Optional[str] = None
+    dimensions: Optional[str] = None
+    weight_grams: Optional[float] = None
+    raw_material_cost: Optional[float] = None
+    labor_hours: Optional[float] = None
+    price: Optional[float] = None
+    image_url: Optional[str] = None
+    gi_certified: Optional[bool] = None
+    ondc_published: Optional[bool] = None
+
+class ProductPatch(BaseModel):
+    ondc_published: Optional[bool] = None
+    whatsapp_sync: Optional[bool] = None
+    price: Optional[float] = None
+    trust_badge: Optional[str] = None
+
+class PhotoUploadRequest(BaseModel):
+    image_base64: str
+    file_name: Optional[str] = None
+    target: Optional[str] = "catalog"
+
+class PhotoUploadResponse(BaseModel):
+    status: str
+    image_url: str
+    file_name: str
+    size_bytes: int
+    uploaded_at: datetime
 
 class ProductOut(BaseModel):
     id: int
@@ -95,8 +129,11 @@ class ProductOut(BaseModel):
     material: str
     dimensions: str
     suggested_price: float
+    raw_material_cost: Optional[float] = None
+    labor_hours: Optional[float] = None
     symmetry_score: float
     trust_badge: str
+    image_url: Optional[str] = None
     ondc_published: bool
     whatsapp_sync: bool
     created_at: datetime
@@ -131,3 +168,4 @@ class OfflineSyncBatchResponse(BaseModel):
     processed_count: int
     status: str
     synced_at: datetime
+

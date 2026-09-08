@@ -1,11 +1,15 @@
 import React from 'react';
 import { Globe, Wifi, WifiOff, ShieldCheck, Sparkles } from 'lucide-react';
 
-export const LANGUAGES = [
+const LANGUAGES = [
   { code: 'hi-IN', label: 'हिन्दी (Hindi)', native: 'नमस्ते' },
-  { code: 'en-IN', label: 'English', native: 'Hello' },
+  { code: 'en-IN', label: 'English (Artisan)', native: 'Hello' },
   { code: 'bn-IN', label: 'বাংলা (Bengali)', native: 'নমস্কার' },
   { code: 'ta-IN', label: 'தமிழ் (Tamil)', native: 'வணக்கம்' },
+  { code: 'te-IN', label: 'తెలుగు (Telugu)', native: 'నమస్కారం' },
+  { code: 'mr-IN', label: 'मराठी (Marathi)', native: 'नमस्कार' },
+  { code: 'gu-IN', label: 'ગુજરાતી (Gujarati)', native: 'નમસ્તે' },
+  { code: 'kn-IN', label: 'ಕನ್ನಡ (Kannada)', native: 'ನಮಸ್ಕಾರ' },
 ];
 
 export default function Navbar({ selectedLang, onSelectLang, isOnline, onToggleOnline }) {
