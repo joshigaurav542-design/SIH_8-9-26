@@ -68,6 +68,8 @@ class AuthenticityCertificateSchema(BaseModel):
     verification_hash: str
     qr_payload: str
     trust_badge: str
+    issued_at: Optional[str] = None
+    powered_by: Optional[str] = "Google Gemini 3.7 Flash AI"
 
 # --- Product Cataloging & ONDC ---
 class ProductCreate(BaseModel):

@@ -32,6 +32,54 @@ HERITAGE_TRADITIONS = {
     }
 }
 
+from app.core.config import settings
+
+def call_gemini_craft_story(
+    product_title: str,
+    craft_style: str,
+    artisan_name: str,
+    region: str,
+    materials_used: str
+) -> str:
+    """
+    Calls Google Gemini API (gemini-3.7-flash) to generate a rich, authentic cultural origin story.
+    Returns None on failure to trigger graceful fallback.
+    """
+    api_key = settings.GEMINI_API_KEY
+    if not api_key or "your-google-gemini-api-key" in api_key:
+        return None
+
+    try:
+        from google import genai
+        client = genai.Client(api_key=api_key)
+        prompt = (
+            f"You are a master Indian cultural heritage curator documenting GI-tagged handicrafts for the ONDC marketplace under the PM Vishwakarma initiative. "
+            f"Write a vivid, emotionally evocative cultural origin narrative (approx 70-90 words) celebrating this handicraft item:\n"
+            f"- Product Title: {product_title}\n"
+            f"- Craft Style: {craft_style}\n"
+            f"- Artisan Name: {artisan_name}\n"
+            f"- Region: {region}\n"
+            f"- Materials Used: {materials_used}\n\n"
+            f"Include authentic historical lineage, indigenous craft technique, zero-waste sustainability, and dignified livelihood. "
+            f"Write in dignified English suitable for an official authenticity certificate. Avoid buzzwords."
+        )
+        
+        # Try resilient models in order
+        candidate_models = ["gemini-3.6-flash", "gemini-3.7-flash", "gemini-3.5-flash-lite"]
+        for model_name in candidate_models:
+            try:
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=prompt
+                )
+                if response and response.text:
+                    return response.text.strip()
+            except Exception as model_err:
+                continue
+    except Exception as err:
+        print(f"[Gemini API Notice] AI Story generation fallback: {err}")
+    return None
+
 def generate_craft_story(
     product_title: str,
     craft_style: str,
@@ -40,7 +88,8 @@ def generate_craft_story(
     materials_used: str
 ) -> dict:
     """
-    Generates a rich, culturally authentic origin story and cryptographic certificate.
+    Generates a rich, culturally authentic origin story (powered by Google Gemini)
+    and cryptographic provenance certificate for ONDC marketplace.
     """
     heritage_info = HERITAGE_TRADITIONS.get(
         craft_style,
@@ -57,13 +106,25 @@ def generate_craft_story(
     payload_to_hash = f"{cert_uuid}:{product_title}:{artisan_name}:{region}:{timestamp_str}"
     fingerprint = hashlib.sha256(payload_to_hash.encode("utf-8")).hexdigest()
     
-    story_narrative = (
-        f"In the historic artisan cluster of {region}, master craftsperson {artisan_name} "
-        f"breathed life into this {product_title}. Rooted in {heritage_info['lineage']}, "
-        f"{heritage_info['narrative']} Crafted meticulously with {materials_used}, "
-        f"this piece embodies zero-waste sustainable production, preserving traditional "
-        f"knowledge while providing dignified livelihood under the PM Vishwakarma ecosystem."
+    # Try live Google Gemini generation first
+    gemini_story = call_gemini_craft_story(
+        product_title=product_title,
+        craft_style=craft_style,
+        artisan_name=artisan_name,
+        region=region,
+        materials_used=materials_used
     )
+
+    if gemini_story:
+        story_narrative = gemini_story
+    else:
+        story_narrative = (
+            f"In the historic artisan cluster of {region}, master craftsperson {artisan_name} "
+            f"breathed life into this {product_title}. Rooted in {heritage_info['lineage']}, "
+            f"{heritage_info['narrative']} Crafted meticulously with {materials_used}, "
+            f"this piece embodies zero-waste sustainable production, preserving traditional "
+            f"knowledge while providing dignified livelihood under the PM Vishwakarma ecosystem."
+        )
     
     verification_url = f"https://artisan-provenance.ondc.org/verify/{cert_uuid}"
 
@@ -77,5 +138,7 @@ def generate_craft_story(
         "verification_hash": fingerprint,
         "qr_payload": verification_url,
         "trust_badge": "Government of India Pahchan & GI-Tagged Certified",
-        "issued_at": timestamp_str
+        "issued_at": timestamp_str,
+        "powered_by": "Google Gemini 3.7 Flash AI"
     }
+
