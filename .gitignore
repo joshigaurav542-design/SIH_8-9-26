@@ -13,8 +13,7 @@ develop-eggs/
 dist/
 downloads/
 eggs/
-.eggs/
-lib/
+!artisan_companion_mobile/lib/**
 lib64/
 parts/
 sdist/
