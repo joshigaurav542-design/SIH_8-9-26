@@ -319,17 +319,20 @@ export default function App() {
                 </div>
               )}
               {activeStep === 4 && (
-                <ArtisanCatalogue
-                  products={catalogueProducts}
-                  onAddProduct={handleAddProduct}
-                  onRemoveProduct={handleRemoveProduct}
-                  onEditProduct={handleEditProduct}
-                  onToggleOndcStatus={handleToggleOndcStatus}
-                  onCreateNewListing={() => setActiveStep(1)}
-                  pricing={pricing}
-                  onPriceCalculated={setPricing}
-                  scannedCraft={scannedCraft}
-                />
+                <div className="space-y-4">
+                  <ArtisanCatalogue
+                    products={catalogueProducts}
+                    onAddProduct={handleAddProduct}
+                    onRemoveProduct={handleRemoveProduct}
+                    onEditProduct={handleEditProduct}
+                    onToggleOndcStatus={handleToggleOndcStatus}
+                    onCreateNewListing={() => setActiveStep(1)}
+                    pricing={pricing}
+                    onPriceCalculated={setPricing}
+                    scannedCraft={scannedCraft}
+                  />
+                  <OfflineSyncQueue isOnline={isOnline} />
+                </div>
               )}
             </div>
 
@@ -358,13 +361,8 @@ export default function App() {
           <div className="space-y-6">
             
             {activeStep === 1 && (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2">
-                  <VoicePromptCapture language={language} onVoiceExtracted={handleVoiceExtracted} />
-                </div>
-                <div>
-                  <OfflineSyncQueue isOnline={isOnline} />
-                </div>
+              <div className="w-full">
+                <VoicePromptCapture language={language} onVoiceExtracted={handleVoiceExtracted} />
               </div>
             )}
 
@@ -403,19 +401,14 @@ export default function App() {
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  <div className="lg:col-span-2">
-                    {step2SubTab === 'studio' ? (
-                      <ListingPhotoStudio
-                        onApplyToListing={handleListingPhotosApplied}
-                      />
-                    ) : (
-                      <VisionScanner onScanComplete={setScannedCraft} />
-                    )}
-                  </div>
-                  <div>
-                    <OfflineSyncQueue isOnline={isOnline} />
-                  </div>
+                <div className="w-full">
+                  {step2SubTab === 'studio' ? (
+                    <ListingPhotoStudio
+                      onApplyToListing={handleListingPhotosApplied}
+                    />
+                  ) : (
+                    <VisionScanner onScanComplete={setScannedCraft} />
+                  )}
                 </div>
               </div>
             )}
@@ -437,17 +430,20 @@ export default function App() {
             )}
 
             {activeStep === 4 && (
-              <ArtisanCatalogue
-                products={catalogueProducts}
-                onAddProduct={handleAddProduct}
-                onRemoveProduct={handleRemoveProduct}
-                onEditProduct={handleEditProduct}
-                onToggleOndcStatus={handleToggleOndcStatus}
-                onCreateNewListing={() => setActiveStep(1)}
-                pricing={pricing}
-                onPriceCalculated={setPricing}
-                scannedCraft={scannedCraft}
-              />
+              <div className="space-y-6">
+                <ArtisanCatalogue
+                  products={catalogueProducts}
+                  onAddProduct={handleAddProduct}
+                  onRemoveProduct={handleRemoveProduct}
+                  onEditProduct={handleEditProduct}
+                  onToggleOndcStatus={handleToggleOndcStatus}
+                  onCreateNewListing={() => setActiveStep(1)}
+                  pricing={pricing}
+                  onPriceCalculated={setPricing}
+                  scannedCraft={scannedCraft}
+                />
+                <OfflineSyncQueue isOnline={isOnline} />
+              </div>
             )}
 
             {/* National Impact Metrics on every view */}
