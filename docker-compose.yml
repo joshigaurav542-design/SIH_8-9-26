@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: artisan_companion_backend
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - DEBUG=True
+      - DATABASE_URL=sqlite:///./artisan_companion.db
+      - ONDC_BPP_ID=artisan-bpp.brocode.sih.in
+      - ONDC_BPP_URI=http://backend:8000/api/v1/ondc
+    volumes:
+      - ./backend:/app
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: artisan_companion_frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000/api/v1
+    depends_on:
+      - backend
+    restart: unless-stopped

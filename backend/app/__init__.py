@@ -1,0 +1,1 @@
+# Smart Artisan Companion Package
