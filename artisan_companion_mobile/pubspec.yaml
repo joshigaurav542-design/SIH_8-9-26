@@ -1,0 +1,38 @@
+name: artisan_companion_mobile
+description: "AI-Driven Market Linkage & Smart Cataloguing Mobile Application for Marginalized Artisans (SIH26090 - Team Bro Code)"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Networking & REST API
+  http: ^1.2.2
+
+  # Offline-First Local Database (Slide 4: SQLite sync)
+  sqflite: ^2.3.3+1
+  path_provider: ^2.1.4
+  path: ^1.9.0
+
+  # State Management
+  provider: ^6.1.2
+
+  # Modern Typography & Icons
+  google_fonts: ^6.2.1
+  cupertino_icons: ^1.0.8
+
+  # On-Device Camera & ML / TF-Lite (Slide 4: On-device Edge AI)
+  camera: ^0.11.0+2
+  tflite_flutter: ^0.10.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
