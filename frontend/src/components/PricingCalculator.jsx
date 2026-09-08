@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { IndianRupee, TrendingUp, ShieldAlert, Sparkles, Scale, Info } from 'lucide-react';
+import { IndianRupee, TrendingUp, ShieldAlert, Sparkles, Scale, Info, Volume2, VolumeX } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
+import { useTextToSpeech } from '../hooks/useSpeech';
 
 const SKILL_RATES = {
   'Apprentice': { rate: 90, label: 'Apprentice (प्रशिक्षु - ₹90/hr)' },
@@ -8,6 +10,8 @@ const SKILL_RATES = {
 };
 
 export default function PricingCalculator({ initialCost = 160, initialHours = 9, onPriceCalculated }) {
+  const { currentLanguage, t } = useLanguage();
+  const { isSpeaking, speak, stop } = useTextToSpeech();
   const [rawCost, setRawCost] = useState(initialCost);
   const [laborHours, setLaborHours] = useState(initialHours);
   const [skillLevel, setSkillLevel] = useState('Master Artisan');
@@ -31,6 +35,19 @@ export default function PricingCalculator({ initialCost = 160, initialHours = 9,
   const middlemanRetailPrice = Math.round(middlemanArtisanPayout * 2.3);
   const artisanExtraGain = Math.round(((fairMarketPrice - middlemanArtisanPayout) / Math.max(middlemanArtisanPayout, 1)) * 100);
 
+  const handlePricingSpeech = () => {
+    if (isSpeaking) {
+      stop();
+      return;
+    }
+    const pricingNarration = (
+      `Fair trade living wage pricing recommendation: The suggested ONDC direct market price is ${fairMarketPrice} rupees. ` +
+      `This covers ${rawCost} rupees for raw materials, and ${totalLaborCost} rupees for ${laborHours} hours of skilled craft work at ${hourlyRate} rupees per hour. ` +
+      `Direct listing provides you with a profit margin of ${marginPercent} percent, which is ${artisanExtraGain} percent higher than traditional middleman trader payouts.`
+    );
+    speak(pricingNarration, currentLanguage);
+  };
+
   useEffect(() => {
     if (onPriceCalculated) {
       onPriceCalculated({
@@ -53,7 +70,7 @@ export default function PricingCalculator({ initialCost = 160, initialHours = 9,
             3
           </span>
           <h2 className="text-base font-bold text-white font-heading">
-            Pricing Suggestion & Living Wage Engine (PM Vishwakarma)
+            {t('pricing.title', 'Pricing Suggestion & Living Wage Engine (PM Vishwakarma)')}
           </h2>
         </div>
         <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
@@ -62,7 +79,7 @@ export default function PricingCalculator({ initialCost = 160, initialHours = 9,
       </div>
 
       <p className="text-xs text-[var(--text-muted)] mb-5">
-        Replaces arbitrary trader exploitation with algorithmic fair wages based on raw materials, craft complexity, and master labor hours.
+        {t('pricing.subtitle', 'Replaces arbitrary trader exploitation with algorithmic fair wages based on raw materials, craft complexity, and master labor hours.')}
       </p>
 
       {/* Main Grid: Controls & Comparison Card */}
@@ -74,7 +91,7 @@ export default function PricingCalculator({ initialCost = 160, initialHours = 9,
           {/* Raw Material Cost */}
           <div>
             <div className="flex items-center justify-between text-xs mb-1.5">
-              <label className="text-gray-300 font-medium">Raw Material Cost (कच्चे माल का खर्च):</label>
+              <label className="text-gray-300 font-medium">{t('pricing.rawCostLabel', 'Raw Material Cost (₹)')}:</label>
               <span className="font-mono text-white font-bold text-sm">₹{rawCost}</span>
             </div>
             <input
@@ -91,8 +108,8 @@ export default function PricingCalculator({ initialCost = 160, initialHours = 9,
           {/* Labor Hours Invested */}
           <div>
             <div className="flex items-center justify-between text-xs mb-1.5">
-              <label className="text-gray-300 font-medium">Labor Hours Invested (मेहनत के घंटे):</label>
-              <span className="font-mono text-[var(--color-saffron)] font-bold text-sm">{laborHours} hrs</span>
+              <label className="text-gray-300 font-medium">{t('pricing.laborHoursLabel', 'Labor Hours Invested')}:</label>
+              <span className="font-mono text-[var(--color-saffron)] font-bold text-sm">{laborHours} {t('catalogue.hoursShort', 'hrs')}</span>
             </div>
             <input
               type="range"
@@ -108,7 +125,7 @@ export default function PricingCalculator({ initialCost = 160, initialHours = 9,
           {/* Artisan Skill Level */}
           <div>
             <label className="block text-xs font-medium text-gray-300 mb-1.5">
-              Artisan Skill Tier (कारीगर का स्तर):
+              {t('pricing.skillLevelLabel', 'Artisan Skill Level')}:
             </label>
             <select
               value={skillLevel}
@@ -126,7 +143,7 @@ export default function PricingCalculator({ initialCost = 160, initialHours = 9,
           {/* Profit Margin */}
           <div>
             <div className="flex items-center justify-between text-xs mb-1.5">
-              <label className="text-gray-300 font-medium">Artisan Fair Profit Margin (कारीगर लाभ):</label>
+              <label className="text-gray-300 font-medium">{t('pricing.artisanMarginLabel', 'Artisan Profit Margin (%)')}:</label>
               <span className="font-mono text-emerald-400 font-bold text-sm">{marginPercent}%</span>
             </div>
             <input
@@ -150,7 +167,31 @@ export default function PricingCalculator({ initialCost = 160, initialHours = 9,
               <span className="flex items-center gap-1 text-[var(--color-saffron)] font-semibold">
                 <Scale className="w-3.5 h-3.5" /> Fair Trade Living Wage Breakdown
               </span>
-              <span className="text-[10px] text-gray-400 font-mono">Algorithm v1.4</span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handlePricingSpeech}
+                  className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-semibold transition-all ${
+                    isSpeaking
+                      ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 animate-pulse'
+                      : 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25'
+                  }`}
+                  title="Listen to living wage calculation aloud"
+                >
+                  {isSpeaking ? (
+                    <>
+                      <VolumeX className="w-3.5 h-3.5 text-rose-400" />
+                      <span>{t('voice.stopAudio', 'Stop Audio')}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>{t('voice.listenPricing', 'Listen to Advice')}</span>
+                    </>
+                  )}
+                </button>
+                <span className="text-[10px] text-gray-400 font-mono">Algorithm v1.4</span>
+              </div>
             </div>
 
             <div className="space-y-2 py-3 text-xs">
@@ -171,7 +212,7 @@ export default function PricingCalculator({ initialCost = 160, initialHours = 9,
             {/* Total Highlight */}
             <div className="p-3 rounded-xl bg-black/40 border border-emerald-500/30 flex items-center justify-between mt-1">
               <div>
-                <div className="text-[10px] uppercase tracking-wider text-gray-400">Suggested ONDC Listing Price</div>
+                <div className="text-[10px] uppercase tracking-wider text-gray-400">{t('pricing.suggestedPriceTitle', 'Suggested ONDC Listing Price')}</div>
                 <div className="text-2xl font-extrabold text-white font-heading flex items-center">
                   <IndianRupee className="w-5 h-5 text-emerald-400" />
                   <span>{fairMarketPrice}</span>
@@ -181,7 +222,7 @@ export default function PricingCalculator({ initialCost = 160, initialHours = 9,
                 <span className="px-2 py-1 rounded-md bg-emerald-500/20 text-emerald-300 font-bold text-xs flex items-center gap-0.5">
                   <TrendingUp className="w-3 h-3" /> +{artisanExtraGain}%
                 </span>
-                <div className="text-[9px] text-gray-400 mt-0.5">Income Increase</div>
+                <div className="text-[9px] text-gray-400 mt-0.5">{t('pricing.artisanKeeps', 'Income Increase')}</div>
               </div>
             </div>
           </div>
@@ -190,7 +231,7 @@ export default function PricingCalculator({ initialCost = 160, initialHours = 9,
           <div className="mt-3 p-2.5 rounded-lg bg-amber-950/25 border border-amber-500/30 text-[11px] text-amber-300 flex items-start gap-2">
             <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
             <div>
-              <strong>Middleman Bypass:</strong> Traders typically pay only ₹{middlemanArtisanPayout} for this piece and sell it in metropolitan stores for ₹{middlemanRetailPrice}. Direct ONDC ensures 100% of the ₹{fairMarketPrice} reaches the artisan.
+              <strong>{t('pricing.middlemanComparison', 'Middleman Bypass')}:</strong> Traders typically pay only ₹{middlemanArtisanPayout} for this piece and sell it in metropolitan stores for ₹{middlemanRetailPrice}. Direct ONDC ensures 100% of the ₹{fairMarketPrice} reaches the artisan.
             </div>
           </div>
 
