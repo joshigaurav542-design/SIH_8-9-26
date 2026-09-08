@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Smartphone, Monitor, Sparkles, CheckCircle2, ChevronRight, Layers, Award, ArrowUpRight, Camera, Package } from 'lucide-react';
+import {
+  fetchProducts,
+  saveProductToDatabase,
+  updateProductInDatabase,
+  deleteProductFromDatabase,
+  toggleProductOndcInDatabase
+} from './services/apiService';
+import { useLanguage } from './context/LanguageContext';
 import Navbar from './components/Navbar';
 import VoicePromptCapture from './components/VoicePromptCapture';
 import VisionScanner from './components/VisionScanner';
@@ -7,10 +15,8 @@ import ListingPhotoStudio from './components/ListingPhotoStudio';
 import PricingCalculator from './components/PricingCalculator';
 import StoryCertificate from './components/StoryCertificate';
 import ONDCPublishModal from './components/ONDCPublishModal';
-import OfflineSyncQueue from './components/OfflineSyncQueue';
 import NationalImpactMetrics from './components/NationalImpactMetrics';
 import ArtisanCatalogue, { INITIAL_CATALOGUE } from './components/ArtisanCatalogue';
-import { useLanguage } from './context/LanguageContext';
 
 export default function App() {
   const { language, setLanguage, t } = useLanguage();
@@ -55,6 +61,16 @@ export default function App() {
     return INITIAL_CATALOGUE;
   });
 
+  // Load products from live Database on startup (with offline fallback)
+  useEffect(() => {
+    fetchProducts().then(({ data, source }) => {
+      console.log(`[Database Sync] Loaded ${data.length} products from: ${source}`);
+      if (data && data.length > 0) {
+        setCatalogueProducts(data);
+      }
+    });
+  }, []);
+
   useEffect(() => {
     try {
       localStorage.setItem('artisan_catalogue_v1', JSON.stringify(catalogueProducts));
@@ -65,26 +81,39 @@ export default function App() {
 
   const handleAddProduct = (newProd) => {
     setCatalogueProducts(prev => [newProd, ...prev]);
+    saveProductToDatabase(newProd);
   };
 
   const handleRemoveProduct = (productId) => {
-    setCatalogueProducts(prev => prev.filter(p => p.id !== productId));
+    setCatalogueProducts(prev => prev.filter(p => p.id !== productId && p.sku !== productId));
+    deleteProductFromDatabase(productId);
   };
 
   const handleEditProduct = (updatedProd) => {
     setCatalogueProducts(prev =>
       prev.map(p => (p.id === updatedProd.id ? updatedProd : p))
     );
+    updateProductInDatabase(updatedProd.id || updatedProd.sku, updatedProd);
   };
 
   const handleToggleOndcStatus = (productId) => {
+    let nextStatus = false;
     setCatalogueProducts(prev =>
-      prev.map(p => (p.id === productId ? { ...p, ondcPublished: !p.ondcPublished } : p))
+      prev.map(p => {
+        if (p.id === productId || p.sku === productId) {
+          nextStatus = !p.ondcPublished;
+          return { ...p, ondcPublished: nextStatus };
+        }
+        return p;
+      })
     );
+    toggleProductOndcInDatabase(productId, nextStatus);
   };
 
   const handlePublishSuccess = () => {
-    // Automatically add/update the current product in the catalogue
+    // Automatically add/update the current product in the catalogue and persist to database
+    let newlyCreatedEntry = null;
+
     setCatalogueProducts(prev => {
       const existingIdx = prev.findIndex(p => p.title === scannedCraft.name || p.id === scannedCraft.id);
       if (existingIdx >= 0) {
@@ -95,6 +124,7 @@ export default function App() {
           price: pricing.fairMarketPrice || updated[existingIdx].price,
           image: scannedCraft.image || updated[existingIdx].image
         };
+        newlyCreatedEntry = updated[existingIdx];
         return updated;
       }
       const newEntry = {
@@ -115,8 +145,16 @@ export default function App() {
         image: scannedCraft.image,
         dateAdded: new Date().toISOString().split('T')[0]
       };
+      newlyCreatedEntry = newEntry;
       return [newEntry, ...prev];
     });
+
+    // Asynchronously commit to the backend database
+    if (newlyCreatedEntry) {
+      saveProductToDatabase(newlyCreatedEntry).then(res => {
+        console.log('[DB Sync] Result:', res.synced ? 'Persisted to Database' : 'Queued Offline');
+      });
+    }
   };
 
   const handleListingPhotosApplied = (primaryImageUrl, allPhotos) => {
@@ -139,10 +177,11 @@ export default function App() {
   };
 
   const steps = [
-    { id: 1, label: t('steps.step1', '1. Voice Prompt'), hint: t('steps.step1Sub', 'Vernacular Speech') },
-    { id: 2, label: t('steps.step2', '2. Edge AI Vision'), hint: t('steps.step2Sub', 'Camera & Hard Drive') },
-    { id: 3, label: t('steps.step3', '3. ONDC Publish'), hint: t('steps.step3Sub', 'Direct Market Sync') },
-    { id: 4, label: t('steps.step4', '4. My Catalogue'), hint: `${catalogueProducts.length} ${t('catalogue.colProduct', 'Items')}` }
+    { id: 1, label: 'Multilingual Speech', hint: 'BHASHINI & Whisper AI' },
+    { id: 2, label: 'Vision Quality Rating', hint: 'INT8 YOLOv8 & OpenCV' },
+    { id: 3, label: 'Heritage Valuation', hint: 'PM Vishwakarma Matrix' },
+    { id: 4, label: 'Market Distribution', hint: 'Beckn Protocol v1.2' },
+    { id: 5, label: 'My Catalogue', hint: `${catalogueProducts.length} Items & Pricing` }
   ];
 
   return (
@@ -186,7 +225,7 @@ export default function App() {
       />
 
       <main className="max-w-6xl mx-auto px-4 w-full flex-grow">
-        
+
         {/* Top Hero Banner & Mode Toggle */}
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
           <div>
@@ -204,7 +243,7 @@ export default function App() {
 
           {/* View / Mode Toggles */}
           <div className="flex flex-wrap items-center gap-2">
-            
+
             {/* Studio vs Catalogue Switcher */}
             <div className="flex items-center glass-pill p-1">
               <button
@@ -214,18 +253,17 @@ export default function App() {
                   activeStep !== 4
                     ? 'bg-[var(--color-terracotta)] text-white shadow-md'
                     : 'text-gray-400 hover:text-white'
-                }`}
+                  }`}
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>{t('steps.step2', 'AI Listing Studio')}</span>
               </button>
               <button
-                onClick={() => setActiveStep(4)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                  activeStep === 4
+                onClick={() => setActiveStep(5)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${activeStep === 5
                     ? 'bg-amber-500 text-black shadow-md'
                     : 'text-gray-400 hover:text-white'
-                }`}
+                  }`}
               >
                 <Package className="w-3.5 h-3.5" />
                 <span>{t('steps.step4', 'Catalogue')} ({catalogueProducts.length})</span>
@@ -236,18 +274,16 @@ export default function App() {
             <div className="flex items-center glass-pill p-1">
               <button
                 onClick={() => setIsMobileSimView(false)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                  !isMobileSimView ? 'bg-[var(--color-saffron)] text-black' : 'text-gray-400 hover:text-white'
-                }`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${!isMobileSimView ? 'bg-[var(--color-saffron)] text-black' : 'text-gray-400 hover:text-white'
+                  }`}
               >
                 <Monitor className="w-3.5 h-3.5" />
                 <span>Dashboard</span>
               </button>
               <button
                 onClick={() => setIsMobileSimView(true)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                  isMobileSimView ? 'bg-[var(--color-saffron)] text-black' : 'text-gray-400 hover:text-white'
-                }`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${isMobileSimView ? 'bg-[var(--color-saffron)] text-black' : 'text-gray-400 hover:text-white'
+                  }`}
               >
                 <Smartphone className="w-3.5 h-3.5" />
                 <span>Mobile Companion</span>
@@ -257,31 +293,24 @@ export default function App() {
           </div>
         </div>
 
-        {/* 4-Step Interactive Workflow Progress Navigation */}
-        <div className="glass-panel p-2 mb-6 overflow-x-auto">
-          <div className="flex items-center justify-between min-w-[500px]">
+        {/* 5-Step Interactive Workflow Progress Navigation from picture */}
+        <div className="mb-6 overflow-x-auto pb-1">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 min-w-[660px]">
             {steps.map((step) => (
               <button
                 key={step.id}
                 onClick={() => setActiveStep(step.id)}
-                className={`flex-1 flex items-center gap-2 p-2.5 rounded-xl text-left transition-all ${
-                  activeStep === step.id
-                    ? 'bg-white/10 text-white border border-[var(--color-saffron)]/40'
-                    : 'text-gray-400 hover:text-gray-200'
-                }`}
-              >
-                <div
-                  className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs ${
-                    activeStep === step.id
-                      ? 'bg-[var(--color-saffron)] text-black'
-                      : 'bg-white/5 text-gray-400'
+                className={`p-3.5 rounded-2xl text-left transition-all duration-200 ${activeStep === step.id
+                    ? 'bg-[#0D1424] border-2 border-amber-500 shadow-[0_0_18px_rgba(245,158,11,0.28)]'
+                    : 'bg-[#0C1220] border border-white/5 hover:border-white/15'
                   }`}
-                >
-                  {step.id}
+              >
+                <div className={`text-xs sm:text-sm font-bold truncate leading-snug ${activeStep === step.id ? 'text-white' : 'text-slate-200'
+                  }`}>
+                  {step.label}
                 </div>
-                <div className="truncate">
-                  <div className="text-xs font-bold leading-tight truncate">{step.label}</div>
-                  <div className="text-[10px] text-gray-400 truncate">{step.hint}</div>
+                <div className="text-[11px] text-slate-400 truncate mt-1">
+                  {step.hint}
                 </div>
               </button>
             ))}
@@ -294,7 +323,7 @@ export default function App() {
           <div className="max-w-[400px] mx-auto p-3 rounded-[40px] bg-slate-900 border-[6px] border-slate-700 shadow-2xl mb-8 relative">
             {/* Phone Speaker Notch */}
             <div className="w-24 h-4 bg-slate-800 rounded-full mx-auto mb-3" />
-            
+
             <div className="space-y-4 max-h-[720px] overflow-y-auto pr-1">
               {activeStep === 1 && (
                 <VoicePromptCapture language={language} onVoiceExtracted={handleVoiceExtracted} />
@@ -304,22 +333,20 @@ export default function App() {
                   <div className="flex items-center glass-pill p-1 gap-1">
                     <button
                       onClick={() => setStep2SubTab('studio')}
-                      className={`flex-1 py-1 px-2 rounded-full text-[11px] font-semibold flex items-center justify-center gap-1 transition-all ${
-                        step2SubTab === 'studio'
+                      className={`flex-1 py-1 px-2 rounded-full text-[11px] font-semibold flex items-center justify-center gap-1 transition-all ${step2SubTab === 'studio'
                           ? 'bg-[var(--color-terracotta)] text-white'
                           : 'text-gray-400 hover:text-white'
-                      }`}
+                        }`}
                     >
                       <Camera className="w-3 h-3" />
                       <span>Photo Studio</span>
                     </button>
                     <button
                       onClick={() => setStep2SubTab('scanner')}
-                      className={`flex-1 py-1 px-2 rounded-full text-[11px] font-semibold flex items-center justify-center gap-1 transition-all ${
-                        step2SubTab === 'scanner'
+                      className={`flex-1 py-1 px-2 rounded-full text-[11px] font-semibold flex items-center justify-center gap-1 transition-all ${step2SubTab === 'scanner'
                           ? 'bg-[var(--color-saffron)] text-black'
                           : 'text-gray-400 hover:text-white'
-                      }`}
+                        }`}
                     >
                       <Sparkles className="w-3 h-3" />
                       <span>AI Scanner</span>
@@ -336,19 +363,19 @@ export default function App() {
                 </div>
               )}
               {activeStep === 3 && (
-                <div className="space-y-4">
+                <>
                   <ONDCPublishModal
                     product={scannedCraft}
                     pricing={pricing}
                     isOnline={isOnline}
                     onPublishSuccess={handlePublishSuccess}
-                    onViewCatalogue={() => setActiveStep(4)}
+                    onViewCatalogue={() => setActiveStep(5)}
                   />
                   <StoryCertificate craft={scannedCraft} />
                   <OfflineSyncQueue isOnline={isOnline} />
-                </div>
+                </>
               )}
-              {activeStep === 4 && (
+              {activeStep === 5 && (
                 <ArtisanCatalogue
                   products={catalogueProducts}
                   onAddProduct={handleAddProduct}
@@ -359,6 +386,7 @@ export default function App() {
                   pricing={pricing}
                   onPriceCalculated={setPricing}
                   scannedCraft={scannedCraft}
+                  isOnline={isOnline}
                 />
               )}
             </div>
@@ -372,10 +400,10 @@ export default function App() {
               >
                 Previous
               </button>
-              <span className="text-gray-500 font-mono text-[11px]">Step {activeStep} of 4</span>
+              <span className="text-gray-500 font-mono text-[11px]">Step {activeStep} of 5</span>
               <button
-                disabled={activeStep === 4}
-                onClick={() => setActiveStep(prev => Math.min(4, prev + 1))}
+                disabled={activeStep === 5}
+                onClick={() => setActiveStep(prev => Math.min(5, prev + 1))}
                 className="text-[var(--color-saffron)] font-bold disabled:opacity-30 flex items-center gap-1"
               >
                 <span>Next</span>
@@ -386,11 +414,11 @@ export default function App() {
         ) : (
           /* Full Dashboard Layout */
           <div className="space-y-6">
-            
+
             {activeStep === 1 && (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2">
-                  <VoicePromptCapture language={language} onVoiceExtracted={handleVoiceExtracted} />
+                  <VoicePromptCapture language={selectedLang} onVoiceExtracted={handleVoiceExtracted} />
                 </div>
                 <div>
                   <OfflineSyncQueue isOnline={isOnline} />
@@ -404,22 +432,20 @@ export default function App() {
                   <div className="flex items-center glass-pill p-1 gap-1">
                     <button
                       onClick={() => setStep2SubTab('studio')}
-                      className={`py-1.5 px-3.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                        step2SubTab === 'studio'
+                      className={`py-1.5 px-3.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all ${step2SubTab === 'studio'
                           ? 'bg-[var(--color-terracotta)] text-white shadow-md'
                           : 'text-gray-400 hover:text-white'
-                      }`}
+                        }`}
                     >
                       <Camera className="w-3.5 h-3.5" />
                       <span>Camera & Hard Drive Photo Studio</span>
                     </button>
                     <button
                       onClick={() => setStep2SubTab('scanner')}
-                      className={`py-1.5 px-3.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                        step2SubTab === 'scanner'
+                      className={`py-1.5 px-3.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all ${step2SubTab === 'scanner'
                           ? 'bg-[var(--color-saffron)] text-black shadow-md'
                           : 'text-gray-400 hover:text-white'
-                      }`}
+                        }`}
                     >
                       <Sparkles className="w-3.5 h-3.5" />
                       <span>Edge AI Vision Scanner & Quality Rating</span>
@@ -433,40 +459,35 @@ export default function App() {
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  <div className="lg:col-span-2">
-                    {step2SubTab === 'studio' ? (
-                      <ListingPhotoStudio
-                        onApplyToListing={handleListingPhotosApplied}
-                      />
-                    ) : (
-                      <VisionScanner onScanComplete={setScannedCraft} />
-                    )}
-                  </div>
-                  <div>
-                    <OfflineSyncQueue isOnline={isOnline} />
-                  </div>
+                <div className="w-full">
+                  {step2SubTab === 'studio' ? (
+                    <ListingPhotoStudio
+                      onApplyToListing={handleListingPhotosApplied}
+                    />
+                  ) : (
+                    <VisionScanner onScanComplete={setScannedCraft} />
+                  )}
                 </div>
               </div>
             )}
 
             {activeStep === 3 && (
-              <div className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <ONDCPublishModal
                   product={scannedCraft}
                   pricing={pricing}
                   isOnline={isOnline}
                   onPublishSuccess={handlePublishSuccess}
-                  onViewCatalogue={() => setActiveStep(4)}
+                  onViewCatalogue={() => setActiveStep(5)}
                 />
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-6">
                   <StoryCertificate craft={scannedCraft} />
                   <OfflineSyncQueue isOnline={isOnline} />
                 </div>
               </div>
             )}
 
-            {activeStep === 4 && (
+            {activeStep === 5 && (
               <ArtisanCatalogue
                 products={catalogueProducts}
                 onAddProduct={handleAddProduct}
@@ -477,6 +498,7 @@ export default function App() {
                 pricing={pricing}
                 onPriceCalculated={setPricing}
                 scannedCraft={scannedCraft}
+                isOnline={isOnline}
               />
             )}
 

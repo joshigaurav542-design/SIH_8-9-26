@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Package,
   Plus,
@@ -24,10 +24,11 @@ import {
   ShieldCheck,
   IndianRupee,
   RefreshCw,
-  Edit3
+  Edit3,
+  Database
 } from 'lucide-react';
 import { INITIAL_CATALOGUE, getSuggestedPrice } from '../data/catalogueData';
-import PricingCalculator from './PricingCalculator';
+import OfflineSyncQueue from './OfflineSyncQueue';
 import { useLanguage } from '../context/LanguageContext';
 
 export { INITIAL_CATALOGUE, getSuggestedPrice };
@@ -41,7 +42,8 @@ export default function ArtisanCatalogue({
   onCreateNewListing,
   pricing,
   onPriceCalculated,
-  scannedCraft
+  scannedCraft,
+  isOnline = true
 }) {
   const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
@@ -82,6 +84,7 @@ export default function ArtisanCatalogue({
 
   // Embedded Pricing Suggestion Advisor State
   const [showPricingAdvisor, setShowPricingAdvisor] = useState(false);
+  const [showSyncQueue, setShowSyncQueue] = useState(true);
   const [advisorRawCost, setAdvisorRawCost] = useState(160);
   const [advisorLaborHours, setAdvisorLaborHours] = useState(9);
 
@@ -360,7 +363,7 @@ export default function ArtisanCatalogue({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="theme-main-panel p-5 sm:p-8 space-y-5">
 
       {/* Toast Banner */}
       {toastMessage && (
@@ -370,120 +373,53 @@ export default function ArtisanCatalogue({
         </div>
       )}
 
-      {/* Top Banner & Stat Cards */}
-      <div className="glass-panel p-5 relative overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-[var(--color-terracotta)] flex items-center justify-center shadow-lg">
-              <Package className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-white font-heading flex items-center gap-2">
-                <span>{t('catalogue.title', 'Artisan Product Catalogue')}</span>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  {products.length} {t('catalogue.colProduct', 'Items')}
-                </span>
-              </h2>
-              <p className="text-xs text-[var(--text-muted)]">
-                {t('catalogue.subtitle', 'Manage your verified craft listings, track live ONDC network status, and add new inventory.')}
-              </p>
-            </div>
+      {/* 1. Header with exact matching style from picture */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-white shadow-lg shadow-orange-500/35 flex-shrink-0">
+            <Edit3 className="w-5 h-5 text-slate-950" />
           </div>
-
-          {/* Action Buttons */}
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={() => openSpotCamera('quick-snap')}
-              className="btn-secondary px-3 py-2 text-xs flex items-center gap-1.5 hover:border-[var(--color-saffron)] text-amber-300 shadow-sm"
-              title="Click photo of craft on the spot using camera"
-            >
-              <Camera className="w-3.5 h-3.5 text-[var(--color-saffron)]" />
-              <span>{t('catalogue.clickPhotoSpot', 'Click Photo on Spot')}</span>
-            </button>
-
-            <button
-              onClick={() => setShowPricingAdvisor(!showPricingAdvisor)}
-              className="btn-secondary px-3 py-2 text-xs flex items-center gap-1.5 border-amber-500/30 text-amber-300 hover:bg-amber-500/10 shadow-sm"
-              title="Open the AI Living Wage Price Suggestion Calculator directly in Catalogue"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-[var(--color-saffron)]" />
-              <span>{showPricingAdvisor ? t('common.close', 'Hide Price Engine') : t('catalogue.priceEngine', 'AI Price Suggestion Engine')}</span>
-            </button>
-
-            {onCreateNewListing && (
-              <button
-                onClick={onCreateNewListing}
-                className="btn-secondary px-3 py-2 text-xs flex items-center gap-1.5"
-                title="Launch the AI listing studio"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-[var(--color-saffron)]" />
-                <span>{t('steps.step2', 'AI Listing Studio')}</span>
-              </button>
-            )}
-
-            <button
-              onClick={() => setIsAddModalOpen(true)}
-              className="btn-primary px-3.5 py-2 text-xs flex items-center gap-1.5 shadow-lg"
-            >
-              <Plus className="w-4 h-4" />
-              <span>{t('catalogue.addProduct', 'Add New Product')}</span>
-            </button>
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight font-heading">
+              Step 5: My Artisan Catalogue & Pricing
+            </h2>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Direct ONDC Inventory, Fair Living Wage Pricing Advisor & Edge Local Database
+            </p>
           </div>
         </div>
 
-        {/* 4 Overview Metric Tiles */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {/* Action Buttons from picture */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            onClick={() => setShowPricingAdvisor(!showPricingAdvisor)}
+            className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#182032] hover:bg-[#202b44] text-amber-300 border border-amber-500/25 flex items-center gap-1.5 transition-all shadow-sm"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <span>Pricing Advisor</span>
+          </button>
 
-          <div className="p-3 rounded-xl bg-black/30 border border-[var(--border-glass)]">
-            <div className="text-[11px] text-gray-400 mb-1 flex items-center justify-between">
-              <span>{t('stats.productsListed', 'Total Listed')}</span>
-              <Package className="w-3.5 h-3.5 text-amber-400" />
-            </div>
-            <div className="text-xl font-bold text-white font-heading">
-              {products.length}
-            </div>
-            <p className="text-[10px] text-gray-400 mt-0.5">Active craft SKUs</p>
-          </div>
+          <button
+            onClick={() => openSpotCamera('quick-snap')}
+            className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#122438] hover:bg-[#18314e] text-cyan-300 border border-cyan-500/35 flex items-center gap-1.5 transition-all shadow-sm"
+          >
+            <Camera className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Spot Camera Snap</span>
+          </button>
 
-          <div className="p-3 rounded-xl bg-black/30 border border-[var(--border-glass)]">
-            <div className="text-[11px] text-gray-400 mb-1 flex items-center justify-between">
-              <span>{t('stats.liveOnOndc', 'ONDC Live')}</span>
-              <Globe className="w-3.5 h-3.5 text-blue-400" />
-            </div>
-            <div className="text-xl font-bold text-emerald-400 font-heading">
-              {ondcLiveCount}
-            </div>
-            <p className="text-[10px] text-emerald-300 mt-0.5">Indexed on Beckn Network</p>
-          </div>
-
-          <div className="p-3 rounded-xl bg-black/30 border border-[var(--border-glass)]">
-            <div className="text-[11px] text-gray-400 mb-1 flex items-center justify-between">
-              <span>{t('catalogue.listedPrice', 'Catalogue Value')}</span>
-              <IndianRupee className="w-3.5 h-3.5 text-[var(--color-gold)]" />
-            </div>
-            <div className="text-xl font-bold text-white font-heading">
-              ₹{totalValue.toLocaleString('en-IN')}
-            </div>
-            <p className="text-[10px] text-gray-400 mt-0.5">{t('catalogue.suggestedFairPrice', 'Fair living-wage price')}</p>
-          </div>
-
-          <div className="p-3 rounded-xl bg-black/30 border border-[var(--border-glass)]">
-            <div className="text-[11px] text-gray-400 mb-1 flex items-center justify-between">
-              <span>GI Tagged</span>
-              <Award className="w-3.5 h-3.5 text-[var(--color-terracotta)]" />
-            </div>
-            <div className="text-xl font-bold text-amber-300 font-heading">
-              {giCertifiedCount}
-            </div>
-            <p className="text-[10px] text-gray-400 mt-0.5">{t('studio.verifiedGI', 'Geographical Indication')}</p>
-          </div>
-
+          <button
+            onClick={() => setIsAddModalOpen(true)}
+            className="px-4 py-1.5 rounded-full text-xs font-bold bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 shadow-md shadow-amber-500/25 flex items-center gap-1.5 transition-all"
+          >
+            <Plus className="w-4 h-4 text-slate-950" />
+            <span>Add New Product</span>
+          </button>
         </div>
       </div>
 
-      {/* Merged AI Price Suggestion Engine (Embedded in My Catalogue) */}
+      {/* Embedded Pricing Advisor Modal / Drawer */}
       {showPricingAdvisor && (
-        <div className="space-y-4">
+        <div className="p-4 rounded-2xl bg-[#090e1b] border border-amber-500/30">
           <PricingCalculator
             initialCost={advisorRawCost}
             initialHours={advisorLaborHours}
@@ -494,75 +430,142 @@ export default function ArtisanCatalogue({
         </div>
       )}
 
-      {/* Filter & Search Bar */}
-      <div className="glass-panel p-3.5 flex flex-wrap items-center justify-between gap-3">
+      {/* Edge Offline-First SQLite Sync (Only in My Catalogue) */}
+      {showSyncQueue && (
+        <div className="pt-1">
+          <OfflineSyncQueue isOnline={isOnline} />
+        </div>
+      )}
 
-        {/* Search Input */}
-        <div className="relative flex-1 min-w-[220px] max-w-md">
-          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+      {/* 2. Search & View Filter Bar from picture */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        
+        {/* Search Input Pill with Cyan Magnifier */}
+        <div className="relative flex-1 min-w-[280px]">
+          <Search className="w-4 h-4 text-cyan-400 absolute left-4 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder={t('catalogue.searchPlaceholder', 'Search by craft title, SKU, or category...')}
+            placeholder="Search products by title, SKU, craft category, materials..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-black/40 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[var(--color-saffron)] transition-colors"
+            className="w-full bg-[#0a0f1d] border border-slate-700/60 rounded-full pl-10 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/70 transition-colors"
           />
         </div>
 
-        {/* Filters Group */}
-        <div className="flex flex-wrap items-center gap-2">
+        {/* Status & View Mode Filters */}
+        <div className="flex items-center gap-2.5">
+          
+          {/* Status Pill: All • Live Draft */}
+          <div className="bg-[#0a0f1d] border border-slate-700/60 rounded-full p-1 flex items-center gap-1 text-xs">
+            <button
+              onClick={() => setStatusFilter('ALL')}
+              className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                statusFilter === 'ALL'
+                  ? 'bg-slate-800 text-white font-semibold'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              All
+            </button>
+            <button
+              onClick={() => setStatusFilter('ONDC_LIVE')}
+              className={`px-2.5 py-1 rounded-full text-xs font-medium flex items-center gap-1 transition-all ${
+                statusFilter === 'ONDC_LIVE'
+                  ? 'bg-emerald-950/80 text-emerald-300 font-semibold border border-emerald-500/30'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              <span>Live</span>
+            </button>
+            <button
+              onClick={() => setStatusFilter('DRAFT')}
+              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
+                statusFilter === 'DRAFT'
+                  ? 'bg-slate-800 text-amber-300 font-semibold'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Draft
+            </button>
+          </div>
 
-          {/* Status Filter */}
-          <select
-            aria-label="Filter by listing status"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-black/40 border border-white/10 rounded-xl px-2.5 py-1.5 text-xs text-gray-300 focus:outline-none focus:border-[var(--color-saffron)]"
-          >
-            <option value="ALL">{t('catalogue.filterAll', 'All Statuses')}</option>
-            <option value="ONDC_LIVE">{t('catalogue.statusLive', 'ONDC Live Only')}</option>
-            <option value="DRAFT">{t('catalogue.statusDraft', 'Offline / Drafts')}</option>
-          </select>
-
-          {/* Category Filter */}
-          <select
-            aria-label="Filter by craft category"
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="bg-black/40 border border-white/10 rounded-xl px-2.5 py-1.5 text-xs text-gray-300 focus:outline-none focus:border-[var(--color-saffron)]"
-          >
-            {categories.map(cat => (
-              <option key={cat} value={cat}>{cat === 'ALL' ? t('catalogue.allCrafts', 'All Categories') : cat}</option>
-            ))}
-          </select>
-
-          {/* View Mode Toggle */}
-          <div className="flex items-center glass-pill p-0.5">
+          {/* Grid | Table View Pill */}
+          <div className="bg-[#0a0f1d] border border-slate-700/60 rounded-full p-1 flex items-center gap-1 text-xs">
             <button
               onClick={() => setViewMode('grid')}
-              className={`p-1.5 rounded-full transition-all ${viewMode === 'grid' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'
-                }`}
-              title="Grid Cards View"
+              className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all ${
+                viewMode === 'grid'
+                  ? 'bg-amber-500 text-black shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
             >
               <Grid className="w-3.5 h-3.5" />
+              <span>Grid</span>
             </button>
             <button
               onClick={() => setViewMode('table')}
-              className={`p-1.5 rounded-full transition-all ${viewMode === 'table' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'
-                }`}
-              title="Table View"
+              className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 transition-all ${
+                viewMode === 'table'
+                  ? 'bg-amber-500 text-black shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
             >
               <List className="w-3.5 h-3.5" />
+              <span>Table</span>
             </button>
           </div>
 
         </div>
-
       </div>
 
-      {/* Product List: Empty State or Grid/Table */}
+      {/* 3. Category Filter Chips from picture */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+        <button
+          onClick={() => setSelectedCategory('ALL')}
+          className={`px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
+            selectedCategory === 'ALL'
+              ? 'bg-amber-500 text-black shadow-sm'
+              : 'bg-[#0e1628] border border-slate-700/60 text-slate-300 hover:text-white'
+          }`}
+        >
+          All Crafts ({products.length})
+        </button>
+        {categories.filter(c => c !== 'ALL').map(cat => {
+          const count = products.filter(p => p.category === cat).length;
+          const emojiMap = {
+            'Pottery & Terracotta': '🏺',
+            'Handloom & Silk': '👘',
+            'Bell Metal Casting': '🔔',
+            'Woodcraft & Lacquer': '🪵',
+            'Blue Pottery': '🍶',
+            'Traditional Painting': '🎨',
+            'Metalcraft & Inlay': '⚔️',
+            'Temple Arts & Gold Leaf': '✨',
+            'Leathercraft': '👞',
+            'Textile Art': '🧵'
+          };
+          const emoji = emojiMap[cat] || '✨';
+          return (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`px-3.5 py-1.5 rounded-full text-xs whitespace-nowrap flex items-center gap-1.5 transition-all ${
+                selectedCategory === cat
+                  ? 'bg-amber-500 text-black font-bold shadow-sm'
+                  : 'bg-[#0e1628] border border-slate-700/60 text-slate-300 hover:text-white'
+              }`}
+            >
+              <span>{emoji}</span>
+              <span>{cat} {count > 0 ? `(${count})` : ''}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* 4. Product List: Empty State or Exact Grid from picture */}
       {filteredProducts.length === 0 ? (
-        <div className="glass-panel p-12 text-center">
+        <div className="p-12 text-center rounded-2xl bg-[#090e1b] border border-slate-800">
           <Package className="w-12 h-12 text-gray-500 mx-auto mb-3 animate-pulse" />
           <h4 className="text-base font-bold text-white mb-1">{t('catalogue.noProductsFound', 'No Listed Products Found')}</h4>
           <p className="text-xs text-gray-400 max-w-sm mx-auto mb-4">
@@ -578,143 +581,130 @@ export default function ArtisanCatalogue({
                   setSelectedCategory('ALL');
                   setStatusFilter('ALL');
                 }}
-                className="btn-secondary px-3.5 py-1.5 text-xs"
+                className="px-3.5 py-1.5 rounded-full text-xs font-medium bg-slate-800 text-slate-300 hover:text-white"
               >
-                {t('common.cancel', 'Clear Filters')}
+                Clear Filters
               </button>
             )}
             <button
               onClick={() => setIsAddModalOpen(true)}
-              className="btn-primary px-4 py-1.5 text-xs flex items-center gap-1.5"
+              className="px-4 py-1.5 rounded-full text-xs font-bold bg-amber-500 text-black flex items-center gap-1.5"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>{t('catalogue.addProduct', 'Add First Product')}</span>
+              <span>Add First Product</span>
             </button>
           </div>
         </div>
       ) : viewMode === 'grid' ? (
-        /* GRID CARDS VIEW */
+        /* EXACT PRODUCT CARDS GRID FROM PICTURE */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredProducts.map((product) => (
             <div
               key={product.id}
-              className="glass-panel overflow-hidden flex flex-col justify-between border border-[var(--border-glass)] hover:border-amber-500/40 transition-all group"
+              className="artisan-product-card flex flex-col justify-between"
             >
               <div>
-                {/* Product Image Banner */}
-                <div className="relative aspect-[16/10] bg-black overflow-hidden">
+                {/* Product Image Area with exact floating badges */}
+                <div className="relative h-48 sm:h-52 w-full bg-slate-950 overflow-hidden">
                   <img
                     src={product.image}
                     alt={product.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    className="w-full h-full object-cover"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0f1626] via-transparent to-black/35" />
 
-                  {/* SKU & Category Badges */}
-                  <div className="absolute top-2.5 left-2.5 flex flex-wrap gap-1.5">
-                    <span className="bg-black/70 backdrop-blur-sm text-gray-200 text-[10px] font-mono px-2 py-0.5 rounded-full border border-white/15">
-                      {product.sku}
-                    </span>
-                    {product.giCertified && (
-                      <span className="bg-amber-500/90 text-black text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow flex items-center gap-1">
-                        <Award className="w-3 h-3" /> GI TAG
+                  {/* Top Floating Badges from picture */}
+                  <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between pointer-events-none">
+                    {product.giCertified ? (
+                      <span className="bg-amber-500 text-black font-extrabold text-[10px] tracking-wide px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow uppercase">
+                        <span>🏷️</span> GI Tagged
                       </span>
-                    )}
-                  </div>
+                    ) : <div />}
 
-                  {/* ONDC Status Badge */}
-                  <div className="absolute top-2.5 right-2.5">
                     <button
                       onClick={() => onToggleOndcStatus && onToggleOndcStatus(product.id)}
-                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border backdrop-blur-sm flex items-center gap-1 transition-all ${product.ondcPublished
-                          ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40 hover:bg-emerald-900'
-                          : 'bg-slate-900/80 text-amber-300 border-amber-500/40 hover:bg-slate-800'
-                        }`}
-                      title="Click to toggle ONDC live broadcast"
+                      className={`pointer-events-auto text-[10px] font-extrabold tracking-wide px-2.5 py-0.5 rounded-full flex items-center gap-1.5 shadow transition-all ${
+                        product.ondcPublished
+                          ? 'bg-[#10b981] text-black'
+                          : 'bg-slate-800 text-slate-300'
+                      }`}
+                      title="Toggle ONDC live broadcast"
                     >
-                      <span className={`w-1.5 h-1.5 rounded-full ${product.ondcPublished ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-                      <span>{product.ondcPublished ? 'ONDC Live' : 'Draft / Offline'}</span>
+                      <span className={`w-1.5 h-1.5 rounded-full ${product.ondcPublished ? 'bg-black' : 'bg-amber-400'}`} />
+                      <span>{product.ondcPublished ? 'ONDC LIVE' : 'DRAFT'}</span>
                     </button>
                   </div>
 
-                  {/* Pricing Tag Overlay */}
-                  <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-end justify-between">
-                    <div>
-                      <div className="text-[10px] uppercase font-semibold text-gray-300">
-                        {product.category}
-                      </div>
-                      <div className="text-lg font-extrabold text-white font-heading flex items-center">
-                        <span>₹{Number(product.price).toLocaleString('en-IN')}</span>
-                      </div>
-                    </div>
+                  {/* Bottom Overlays on Image from picture */}
+                  <div className="absolute bottom-2 left-2.5 right-2.5 flex items-center justify-between">
+                    <span className="bg-black/85 backdrop-blur-sm text-amber-400 font-mono text-[10px] font-bold px-2 py-0.5 rounded border border-white/5">
+                      {product.sku}
+                    </span>
+                    <span className="bg-black/85 backdrop-blur-sm text-slate-300 text-[10px] px-2 py-0.5 rounded border border-white/5">
+                      {product.category}
+                    </span>
                   </div>
                 </div>
 
-                {/* Card Content Details */}
-                <div className="p-4 space-y-2.5">
-                  <h3 className="text-sm font-bold text-white line-clamp-1 group-hover:text-[var(--color-saffron)] transition-colors" title={product.title}>
+                {/* Card Title & Specs Details from picture */}
+                <div className="px-3 pt-3">
+                  <h3 className="font-bold text-sm text-white line-clamp-1" title={product.title}>
                     {product.title}
                   </h3>
+                  <p className="text-xs text-slate-400 line-clamp-1 mt-0.5">
+                    {product.material || product.craftStyle || 'Natural Artisanal Material'}
+                  </p>
 
-                  <div className="grid grid-cols-2 gap-2 text-[11px] text-gray-300 bg-black/20 p-2.5 rounded-xl border border-white/5">
-                    <div>
-                      <span className="text-gray-500 block text-[10px]">Dimensions:</span>
-                      <span className="font-mono">{product.dimensions}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500 block text-[10px]">Weight:</span>
-                      <span className="font-mono">{product.weight}</span>
-                    </div>
-                    <div className="col-span-2 truncate">
-                      <span className="text-gray-500 block text-[10px]">Material:</span>
-                      <span className="truncate">{product.material}</span>
-                    </div>
+                  {/* Specs Line with Emoji Icons */}
+                  <div className="text-[11px] text-slate-400 mt-2 flex items-center gap-2">
+                    <span className="flex items-center gap-1">
+                      <span>📐</span> {product.dimensions || 'Standard'}
+                    </span>
+                    <span>•</span>
+                    <span className="flex items-center gap-1">
+                      <span>⚖️</span> {product.weight || '1,000g'}
+                    </span>
                   </div>
 
-                  {/* Pricing Suggestion Box */}
-                  <div className="flex items-center justify-between text-[11px] bg-amber-500/10 border border-amber-500/25 px-2.5 py-1.5 rounded-xl">
-                    <div className="flex items-center gap-1 text-amber-300">
-                      <Sparkles className="w-3.5 h-3.5 text-[var(--color-saffron)]" />
-                      <span className="font-bold text-[10px] uppercase tracking-wider">Pricing Suggestion:</span>
+                  {/* Cost / Labor Breakdown Box from picture */}
+                  <div className="bg-[#0a0f1d] border border-slate-800/90 rounded-xl p-2.5 mt-2.5 flex items-center justify-between">
+                    <div>
+                      <div className="text-[9px] uppercase tracking-wider text-slate-500 font-semibold">Raw Cost</div>
+                      <div className="text-xs font-bold text-slate-200 font-mono">₹{product.rawCost || 160}</div>
                     </div>
-                    <div className="text-white font-bold font-mono flex items-center gap-1">
-                      <span>₹{getSuggestedPrice(product).toLocaleString('en-IN')}</span>
-                      <span className="text-[9px] font-normal text-emerald-400 bg-emerald-500/20 px-1 py-0.5 rounded border border-emerald-500/30">
-                        AI Benchmark
-                      </span>
+                    <div>
+                      <div className="text-[9px] uppercase tracking-wider text-slate-500 font-semibold">Labor Time</div>
+                      <div className="text-xs font-bold text-cyan-400 font-mono">{product.laborHours || 8} Hours</div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Card Footer Actions */}
-              <div className="p-3 border-t border-[var(--border-glass)] flex items-center justify-between text-xs bg-black/20">
-                <button
-                  onClick={() => onToggleOndcStatus && onToggleOndcStatus(product.id)}
-                  className="text-gray-400 hover:text-white flex items-center gap-1 transition-colors text-[11px]"
-                >
-                  <Globe className="w-3.5 h-3.5 text-blue-400" />
-                  <span>{product.ondcPublished ? 'Unpublish' : 'Broadcast'}</span>
-                </button>
-
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() => setProductToEdit({ ...product })}
-                    className="text-amber-400 hover:text-amber-300 hover:bg-amber-500/15 px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 text-[11px] border border-amber-500/30 font-semibold"
-                    title="Edit product details & pricing"
-                  >
-                    <Edit3 className="w-3.5 h-3.5" />
-                    <span>Edit</span>
-                  </button>
-
-                  <button
-                    onClick={() => setProductToDelete(product)}
-                    className="text-red-400 hover:text-red-300 hover:bg-red-500/15 p-1.5 rounded-lg transition-all flex items-center gap-1 text-[11px]"
-                    title="Remove from catalogue"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Remove</span>
-                  </button>
+              {/* Card Footer: Verified Fair Price & Actions from picture */}
+              <div className="px-3 pt-2.5 pb-3">
+                <div className="text-[9px] font-bold text-amber-500 uppercase tracking-wider">
+                  VERIFIED FAIR PRICE
+                </div>
+                <div className="flex items-end justify-between mt-0.5">
+                  <div className="text-xl font-bold text-[#e5a93c] font-serif font-heading">
+                    ₹{Number(product.price || product.suggestedPrice || 1500).toLocaleString('en-IN')}
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => handleOpenEditModal(product)}
+                      className="p-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+                      title="Edit Product"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => setProductToDelete(product)}
+                      className="p-1.5 rounded-lg bg-slate-800/80 hover:bg-rose-950/70 text-slate-400 hover:text-rose-400 transition-colors"
+                      title="Delete Product"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -723,7 +713,7 @@ export default function ArtisanCatalogue({
         </div>
       ) : (
         /* TABLE VIEW */
-        <div className="glass-panel overflow-x-auto">
+        <div className="rounded-2xl bg-[#090e1b] border border-slate-800 overflow-x-auto">
           <table className="w-full text-left text-xs text-gray-300 border-collapse">
             <thead className="bg-black/40 text-[10px] uppercase tracking-wider text-gray-400 border-b border-white/10">
               <tr>

@@ -1,0 +1,123 @@
+// Prisma Schema for Smart Artisan Companion (PostgreSQL in Docker)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Artisan {
+  id               String       @id @default(uuid())
+  artisanId        String       @unique @map("artisan_id")
+  name             String
+  craftType        String       @map("craft_type")
+  region           String
+  dialect          String       @default("hi-IN")
+  skillLevel       String       @default("MASTER_ARTISAN") @map("skill_level")
+  hourlyRate       Float        @default(145.0) @map("hourly_rate")
+  pmVishwakarmaId  String?      @unique @map("pm_vishwakarma_id")
+  phone            String?
+  createdAt        DateTime     @default(now()) @map("created_at")
+  updatedAt        DateTime     @updatedAt @map("updated_at")
+
+  products         Product[]
+  certificates     AuthenticityCertificate[]
+
+  @@map("artisans")
+}
+
+model Product {
+  id                 String       @id @default(uuid())
+  sku                String       @unique
+  title              String
+  description        String?
+  category           String
+  craftStyle         String       @map("craft_style")
+  material           String
+  dimensions         String
+  weightGrams        Float        @map("weight_grams")
+  symmetryScore      Float        @default(95.0) @map("symmetry_score")
+  densityScore       Float        @default(93.0) @map("density_score")
+  trustBadge         String       @default("Masterpiece Grade A+ (GI Certified)") @map("trust_badge")
+  rawMaterialCost    Float        @map("raw_material_cost")
+  laborHours         Float        @map("labor_hours")
+  fairLaborCost      Float        @map("fair_labor_cost")
+  suggestedPrice     Float        @map("suggested_price")
+  imageUrl           String?      @map("image_url")
+  ondcPublished      Boolean      @default(false) @map("ondc_published")
+  whatsappSync       Boolean      @default(false) @map("whatsapp_sync")
+  createdAt          DateTime     @default(now()) @map("created_at")
+  updatedAt          DateTime     @updatedAt @map("updated_at")
+
+  artisanId          String       @map("artisan_id")
+  artisan            Artisan      @relation(fields: [artisanId], references: [id], onDelete: Cascade)
+
+  certificates       AuthenticityCertificate[]
+  orderItems         OrderItem[]
+
+  @@map("products")
+}
+
+model AuthenticityCertificate {
+  id               String       @id @default(uuid())
+  certificateId    String       @unique @map("certificate_id")
+  giCertified      Boolean      @default(true) @map("gi_certified")
+  giTagNumber      String?      @map("gi_tag_number")
+  trustLevel       String       @default("Heritage Masterpiece Grade A+") @map("trust_level")
+  verificationHash String       @unique @map("verification_hash")
+  issueDate        DateTime     @default(now()) @map("issue_date")
+
+  artisanId        String       @map("artisan_id")
+  artisan          Artisan      @relation(fields: [artisanId], references: [id], onDelete: Cascade)
+
+  productId        String       @map("product_id")
+  product          Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("authenticity_certificates")
+}
+
+model Order {
+  id              String       @id @default(uuid())
+  orderNumber     String       @unique @map("order_number")
+  customerName    String       @map("customer_name")
+  customerPhone   String       @map("customer_phone")
+  shippingAddress String       @map("shipping_address")
+  totalAmount     Float        @map("total_amount")
+  paymentMethod   String       @default("UPI") @map("payment_method")
+  status          String       @default("PENDING")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+
+  items           OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id         String   @id @default(uuid())
+  quantity   Int      @default(1)
+  unitPrice  Float    @map("unit_price")
+
+  orderId    String   @map("order_id")
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productId  String   @map("product_id")
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@map("order_items")
+}
+
+model OfflineSyncLog {
+  id         String   @id @default(uuid())
+  batchId    String   @unique @map("batch_id")
+  operation  String
+  status     String   @default("PENDING")
+  payload    String
+  createdAt  DateTime @default(now()) @map("created_at")
+  syncedAt   DateTime? @map("synced_at")
+
+  @@map("offline_sync_logs")
+}

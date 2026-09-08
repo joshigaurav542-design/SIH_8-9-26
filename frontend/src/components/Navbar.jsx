@@ -12,7 +12,7 @@ export default function Navbar({ selectedLang, onSelectLang, isOnline, onToggleO
   };
 
   return (
-    <header className="sticky top-0 z-50 glass-panel border-b border-[var(--border-glass)] px-4 py-3 mb-6">
+    <header className="sticky top-0 z-50 bg-[#070b16]/85 backdrop-blur-md border-b border-white/8 px-4 py-3 mb-6 shadow-xl">
       <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-3">
         
         {/* Brand & SIH Identification */}
