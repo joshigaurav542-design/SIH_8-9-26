@@ -28,8 +28,8 @@ import {
   Database
 } from 'lucide-react';
 import { INITIAL_CATALOGUE, getSuggestedPrice } from '../data/catalogueData';
-import PricingCalculator from './PricingCalculator';
 import OfflineSyncQueue from './OfflineSyncQueue';
+import { useLanguage } from '../context/LanguageContext';
 
 export { INITIAL_CATALOGUE, getSuggestedPrice };
 
@@ -45,6 +45,7 @@ export default function ArtisanCatalogue({
   scannedCraft,
   isOnline = true
 }) {
+  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL'); // 'ALL' | 'ONDC_LIVE' | 'DRAFT'
@@ -103,14 +104,31 @@ export default function ArtisanCatalogue({
       if (spotCameraStream) {
         spotCameraStream.getTracks().forEach(t => t.stop());
       }
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: false
-      });
-      setSpotCameraStream(stream);
-      if (spotVideoRef.current) {
-        spotVideoRef.current.srcObject = stream;
+      if (!navigator?.mediaDevices?.getUserMedia) {
+        throw new Error('Your browser or device does not support camera access.');
       }
+
+      let stream = null;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false
+        });
+      } catch (e1) {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment' },
+            audio: false
+          });
+        } catch (e2) {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: false
+          });
+        }
+      }
+
+      setSpotCameraStream(stream);
       setSpotCameraActive(true);
     } catch (err) {
       console.warn('Spot camera access error:', err);
@@ -132,13 +150,31 @@ export default function ArtisanCatalogue({
     setIsSpotCameraOpen(true);
     setTimeout(() => {
       startSpotCamera();
-    }, 150);
+    }, 100);
   };
 
   const closeSpotCamera = () => {
     stopSpotCamera();
     setIsSpotCameraOpen(false);
   };
+
+  // Bind spot camera stream to video element
+  useEffect(() => {
+    if (spotVideoRef.current && spotCameraStream && isSpotCameraOpen) {
+      spotVideoRef.current.srcObject = spotCameraStream;
+      spotVideoRef.current.play().catch(e => console.warn('Spot video playback:', e));
+    }
+  }, [spotCameraStream, isSpotCameraOpen]);
+
+  // Clean up spot camera on unmount
+  useEffect(() => {
+    return () => {
+      if (spotCameraStream) {
+        spotCameraStream.getTracks().forEach(t => t.stop());
+      }
+    };
+  }, [spotCameraStream]);
+
 
   const captureSpotPhoto = () => {
     if (!spotVideoRef.current || !spotCanvasRef.current) return;
@@ -531,19 +567,33 @@ export default function ArtisanCatalogue({
       {filteredProducts.length === 0 ? (
         <div className="p-12 text-center rounded-2xl bg-[#090e1b] border border-slate-800">
           <Package className="w-12 h-12 text-gray-500 mx-auto mb-3 animate-pulse" />
-          <h4 className="text-base font-bold text-white mb-1">No Listed Products Found</h4>
+          <h4 className="text-base font-bold text-white mb-1">{t('catalogue.noProductsFound', 'No Listed Products Found')}</h4>
           <p className="text-xs text-gray-400 max-w-sm mx-auto mb-4">
             {searchQuery || selectedCategory !== 'ALL' || statusFilter !== 'ALL'
               ? 'No products matched your search filters. Try clearing your search or category filter.'
               : 'Your catalogue is currently empty. Click below to add your first handcrafted product!'}
           </p>
-          <button
-            onClick={() => setIsAddModalOpen(true)}
-            className="px-4 py-1.5 rounded-full text-xs font-bold bg-amber-500 text-black flex items-center gap-1.5 mx-auto"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Add First Product</span>
-          </button>
+          <div className="flex justify-center gap-2">
+            {(searchQuery || selectedCategory !== 'ALL' || statusFilter !== 'ALL') && (
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedCategory('ALL');
+                  setStatusFilter('ALL');
+                }}
+                className="px-3.5 py-1.5 rounded-full text-xs font-medium bg-slate-800 text-slate-300 hover:text-white"
+              >
+                Clear Filters
+              </button>
+            )}
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="px-4 py-1.5 rounded-full text-xs font-bold bg-amber-500 text-black flex items-center gap-1.5"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add First Product</span>
+            </button>
+          </div>
         </div>
       ) : viewMode === 'grid' ? (
         /* EXACT PRODUCT CARDS GRID FROM PICTURE */
@@ -680,81 +730,80 @@ export default function ArtisanCatalogue({
                 const suggested = getSuggestedPrice(product);
                 const isBelowFair = Number(product.price) < suggested;
                 return (
-                <tr key={product.id} className="hover:bg-white/5 transition-colors">
-                  <td className="p-3">
-                    <div className="flex items-center gap-2.5">
-                      <img
-                        src={product.image}
-                        alt={product.title}
-                        className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
-                      />
-                      <div>
-                        <div className="font-semibold text-white truncate max-w-[200px]" title={product.title}>
-                          {product.title}
-                        </div>
-                        <div className="text-[10px] text-gray-400 font-mono">
-                          {product.sku}
+                  <tr key={product.id} className="hover:bg-white/5 transition-colors">
+                    <td className="p-3">
+                      <div className="flex items-center gap-2.5">
+                        <img
+                          src={product.image}
+                          alt={product.title}
+                          className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
+                        />
+                        <div>
+                          <div className="font-semibold text-white truncate max-w-[200px]" title={product.title}>
+                            {product.title}
+                          </div>
+                          <div className="text-[10px] text-gray-400 font-mono">
+                            {product.sku}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="p-3">
-                    <div className="font-medium text-gray-200">{product.category}</div>
-                    <div className="text-[10px] text-gray-500 truncate max-w-[180px]">{product.material}</div>
-                  </td>
-                  <td className="p-3 font-mono text-[11px]">
-                    <div>{product.dimensions}</div>
-                    <div className="text-gray-500 text-[10px]">{product.weight}</div>
-                  </td>
-                  <td className="p-3">
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="font-bold text-white font-heading text-xs">
-                        ₹{Number(product.price).toLocaleString('en-IN')}
-                      </span>
-                      <span className="text-[10px] text-gray-400 font-mono">Listed</span>
-                    </div>
-                    <div className="text-[11px] text-amber-300 font-mono flex items-center gap-1 mt-0.5">
-                      <Sparkles className="w-3 h-3 text-[var(--color-saffron)]" />
-                      <span>AI Sug: ₹{suggested.toLocaleString('en-IN')}</span>
-                      {isBelowFair && (
-                        <span className="text-[9px] text-amber-400 bg-amber-500/15 px-1 py-0.2 rounded border border-amber-500/30">
-                          Below Fair
+                    </td>
+                    <td className="p-3">
+                      <div className="font-medium text-gray-200">{product.category}</div>
+                      <div className="text-[10px] text-gray-500 truncate max-w-[180px]">{product.material}</div>
+                    </td>
+                    <td className="p-3 font-mono text-[11px]">
+                      <div>{product.dimensions}</div>
+                      <div className="text-gray-500 text-[10px]">{product.weight}</div>
+                    </td>
+                    <td className="p-3">
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="font-bold text-white font-heading text-xs">
+                          ₹{Number(product.price).toLocaleString('en-IN')}
                         </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="p-3">
-                    <button
-                      onClick={() => onToggleOndcStatus && onToggleOndcStatus(product.id)}
-                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border flex items-center gap-1 ${
-                        product.ondcPublished
-                          ? 'bg-emerald-950 text-emerald-300 border-emerald-500/40'
-                          : 'bg-slate-900 text-amber-300 border-amber-500/40'
-                      }`}
-                    >
-                      <span className={`w-1.5 h-1.5 rounded-full ${product.ondcPublished ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-                      <span>{product.ondcPublished ? 'Live on ONDC' : 'Draft'}</span>
-                    </button>
-                  </td>
-                  <td className="p-3 text-right">
-                    <div className="flex items-center justify-end gap-1.5">
+                        <span className="text-[10px] text-gray-400 font-mono">Listed</span>
+                      </div>
+                      <div className="text-[11px] text-amber-300 font-mono flex items-center gap-1 mt-0.5">
+                        <Sparkles className="w-3 h-3 text-[var(--color-saffron)]" />
+                        <span>AI Sug: ₹{suggested.toLocaleString('en-IN')}</span>
+                        {isBelowFair && (
+                          <span className="text-[9px] text-amber-400 bg-amber-500/15 px-1 py-0.2 rounded border border-amber-500/30">
+                            Below Fair
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-3">
                       <button
-                        onClick={() => setProductToEdit({ ...product })}
-                        className="p-1.5 text-amber-400 hover:text-amber-300 hover:bg-amber-500/20 rounded-lg transition-all"
-                        title="Edit product details & pricing"
+                        onClick={() => onToggleOndcStatus && onToggleOndcStatus(product.id)}
+                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border flex items-center gap-1 ${product.ondcPublished
+                            ? 'bg-emerald-950 text-emerald-300 border-emerald-500/40'
+                            : 'bg-slate-900 text-amber-300 border-amber-500/40'
+                          }`}
                       >
-                        <Edit3 className="w-4 h-4" />
+                        <span className={`w-1.5 h-1.5 rounded-full ${product.ondcPublished ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                        <span>{product.ondcPublished ? 'Live on ONDC' : 'Draft'}</span>
                       </button>
-                      <button
-                        onClick={() => setProductToDelete(product)}
-                        className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-lg transition-all"
-                        title="Remove product"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+                    </td>
+                    <td className="p-3 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => setProductToEdit({ ...product })}
+                          className="p-1.5 text-amber-400 hover:text-amber-300 hover:bg-amber-500/20 rounded-lg transition-all"
+                          title="Edit product details & pricing"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => setProductToDelete(product)}
+                          className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-lg transition-all"
+                          title="Remove product"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
                 );
               })}
             </tbody>
@@ -766,7 +815,7 @@ export default function ArtisanCatalogue({
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
           <div className="glass-panel w-full max-w-xl p-6 relative border border-white/20 shadow-2xl my-8">
-            
+
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/10">
               <div className="flex items-center gap-2">
@@ -792,7 +841,7 @@ export default function ArtisanCatalogue({
 
             {/* Form */}
             <form onSubmit={handleFormSubmit} className="space-y-4 text-xs">
-              
+
               {/* Image Upload / Preview Box */}
               <div>
                 <label className="block text-gray-300 font-medium mb-1.5">
@@ -1053,7 +1102,7 @@ export default function ArtisanCatalogue({
       {productToEdit && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
           <div className="glass-panel w-full max-w-xl p-6 relative border border-amber-500/30 shadow-2xl my-8">
-            
+
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/10">
               <div className="flex items-center gap-2">
@@ -1082,7 +1131,7 @@ export default function ArtisanCatalogue({
 
             {/* Form */}
             <form onSubmit={handleEditFormSubmit} className="space-y-4 text-xs">
-              
+
               {/* Image Preview & Upload */}
               <div>
                 <label className="block text-gray-300 font-medium mb-1.5">
@@ -1202,7 +1251,7 @@ export default function ArtisanCatalogue({
 
               {/* Pricing Suggestion & Cost Inputs */}
               <div className="p-3.5 rounded-xl bg-black/40 border border-white/10 space-y-3">
-                
+
                 {/* AI Pricing Suggestion Banner */}
                 <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-lg bg-amber-500/15 border border-amber-500/30">
                   <div className="flex items-center gap-2">
@@ -1320,7 +1369,7 @@ export default function ArtisanCatalogue({
       {isSpotCameraOpen && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
           <div className="glass-panel w-full max-w-lg p-5 relative border border-amber-500/40 shadow-2xl space-y-4">
-            
+
             {/* Header */}
             <div className="flex items-center justify-between pb-3 border-b border-white/10">
               <div className="flex items-center gap-2.5">
@@ -1338,8 +1387,8 @@ export default function ArtisanCatalogue({
                     {spotCameraTarget === 'edit'
                       ? 'Updating photo for current product'
                       : spotCameraTarget === 'quick-snap'
-                      ? 'Snapping craft to create new catalogue listing'
-                      : 'Attaching photo to new catalogue product'}
+                        ? 'Snapping craft to create new catalogue listing'
+                        : 'Attaching photo to new catalogue product'}
                   </p>
                 </div>
               </div>
@@ -1376,7 +1425,7 @@ export default function ArtisanCatalogue({
                       className="btn-secondary px-3 py-1.5 text-xs flex items-center gap-1"
                     >
                       <HardDrive className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>Upload from Hard Disk</span>
+                      <span>{t('studio.uploadDisk', 'Upload from Hard Disk')}</span>
                     </button>
                   </div>
                 </div>
@@ -1416,7 +1465,7 @@ export default function ArtisanCatalogue({
 
             {/* Instruction Tip */}
             <p className="text-[11px] text-gray-400 text-center">
-              Position your craft in the center. Ensure good lighting for highest quality marketplace listing.
+              {t('camera.subtitle', 'Position your craft in the center. Ensure good lighting for highest quality marketplace listing.')}
             </p>
 
             {/* Shutter / Capture Button */}
@@ -1426,7 +1475,7 @@ export default function ArtisanCatalogue({
                 onClick={closeSpotCamera}
                 className="btn-secondary px-4 py-2 text-xs"
               >
-                Cancel
+                {t('common.cancel', 'Cancel')}
               </button>
 
               <button
@@ -1435,7 +1484,7 @@ export default function ArtisanCatalogue({
                 className="px-6 py-2.5 rounded-full bg-gradient-to-r from-amber-500 to-[var(--color-terracotta)] text-white font-bold text-xs flex items-center gap-2 shadow-xl hover:scale-105 active:scale-95 transition-all"
               >
                 <Camera className="w-4 h-4" />
-                <span>Click Photo Now (Capture)</span>
+                <span>{t('camera.captureBtn', 'Click Photo Now (Capture)')}</span>
               </button>
             </div>
 

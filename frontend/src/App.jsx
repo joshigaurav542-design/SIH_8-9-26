@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Smartphone, Monitor, Sparkles, CheckCircle2, ChevronRight, Layers, Award, ArrowUpRight, Camera, Package } from 'lucide-react';
+import {
+  fetchProducts,
+  saveProductToDatabase,
+  updateProductInDatabase,
+  deleteProductFromDatabase,
+  toggleProductOndcInDatabase
+} from './services/apiService';
+import { useLanguage } from './context/LanguageContext';
 import Navbar from './components/Navbar';
 import VoicePromptCapture from './components/VoicePromptCapture';
 import VisionScanner from './components/VisionScanner';
@@ -9,16 +17,9 @@ import StoryCertificate from './components/StoryCertificate';
 import ONDCPublishModal from './components/ONDCPublishModal';
 import NationalImpactMetrics from './components/NationalImpactMetrics';
 import ArtisanCatalogue, { INITIAL_CATALOGUE } from './components/ArtisanCatalogue';
-import {
-  fetchProducts,
-  saveProductToDatabase,
-  updateProductInDatabase,
-  deleteProductFromDatabase,
-  toggleProductOndcInDatabase
-} from './services/apiService';
 
 export default function App() {
-  const [selectedLang, setSelectedLang] = useState('hi-IN');
+  const { language, setLanguage, t } = useLanguage();
   const [isOnline, setIsOnline] = useState(true);
   const [activeStep, setActiveStep] = useState(1);
   const [isMobileSimView, setIsMobileSimView] = useState(false);
@@ -185,17 +186,17 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col justify-between pb-10">
-      
+
       {/* Navigation Header */}
       <Navbar
-        selectedLang={selectedLang}
-        onSelectLang={setSelectedLang}
+        selectedLang={language}
+        onSelectLang={setLanguage}
         isOnline={isOnline}
         onToggleOnline={() => setIsOnline(!isOnline)}
       />
 
       <main className="max-w-6xl mx-auto px-4 w-full flex-grow">
-        
+
         {/* Top Hero Banner & Mode Toggle */}
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
           <div>
@@ -204,39 +205,37 @@ export default function App() {
               <span>Smart India Hackathon 2026 Solution Showcase</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight font-heading">
-              AI-Driven Market Linkage for Marginalized Artisans
+              {t('nav.title', 'Smart Artisan Companion')}
             </h2>
             <p className="text-xs sm:text-sm text-[var(--text-muted)] max-w-2xl mt-1">
-              Bypassing middlemen through on-device edge AI cataloguing, vernacular voice-to-text, living wage pricing, and direct ONDC commerce.
+              {t('voice.subtitle')}
             </p>
           </div>
 
           {/* View / Mode Toggles */}
           <div className="flex flex-wrap items-center gap-2">
-            
+
             {/* Studio vs Catalogue Switcher */}
             <div className="flex items-center glass-pill p-1">
               <button
                 onClick={() => { if (activeStep === 5) setActiveStep(1); }}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                  activeStep !== 5
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${activeStep !== 5
                     ? 'bg-[var(--color-terracotta)] text-white shadow-md'
                     : 'text-gray-400 hover:text-white'
-                }`}
+                  }`}
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>AI Listing Studio</span>
+                <span>{t('steps.step2', 'AI Listing Studio')}</span>
               </button>
               <button
                 onClick={() => setActiveStep(5)}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                  activeStep === 5
-                    ? 'bg-amber-500 text-black shadow-md font-bold'
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${activeStep === 5
+                    ? 'bg-amber-500 text-black shadow-md'
                     : 'text-gray-400 hover:text-white'
-                }`}
+                  }`}
               >
                 <Package className="w-3.5 h-3.5" />
-                <span>Catalogue ({catalogueProducts.length})</span>
+                <span>{t('steps.step4', 'Catalogue')} ({catalogueProducts.length})</span>
               </button>
             </div>
 
@@ -244,18 +243,16 @@ export default function App() {
             <div className="flex items-center glass-pill p-1">
               <button
                 onClick={() => setIsMobileSimView(false)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                  !isMobileSimView ? 'bg-[var(--color-saffron)] text-black' : 'text-gray-400 hover:text-white'
-                }`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${!isMobileSimView ? 'bg-[var(--color-saffron)] text-black' : 'text-gray-400 hover:text-white'
+                  }`}
               >
                 <Monitor className="w-3.5 h-3.5" />
                 <span>Dashboard</span>
               </button>
               <button
                 onClick={() => setIsMobileSimView(true)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                  isMobileSimView ? 'bg-[var(--color-saffron)] text-black' : 'text-gray-400 hover:text-white'
-                }`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${isMobileSimView ? 'bg-[var(--color-saffron)] text-black' : 'text-gray-400 hover:text-white'
+                  }`}
               >
                 <Smartphone className="w-3.5 h-3.5" />
                 <span>Mobile Companion</span>
@@ -272,15 +269,13 @@ export default function App() {
               <button
                 key={step.id}
                 onClick={() => setActiveStep(step.id)}
-                className={`p-3.5 rounded-2xl text-left transition-all duration-200 ${
-                  activeStep === step.id
+                className={`p-3.5 rounded-2xl text-left transition-all duration-200 ${activeStep === step.id
                     ? 'bg-[#0D1424] border-2 border-amber-500 shadow-[0_0_18px_rgba(245,158,11,0.28)]'
                     : 'bg-[#0C1220] border border-white/5 hover:border-white/15'
-                }`}
+                  }`}
               >
-                <div className={`text-xs sm:text-sm font-bold truncate leading-snug ${
-                  activeStep === step.id ? 'text-white' : 'text-slate-200'
-                }`}>
+                <div className={`text-xs sm:text-sm font-bold truncate leading-snug ${activeStep === step.id ? 'text-white' : 'text-slate-200'
+                  }`}>
                   {step.label}
                 </div>
                 <div className="text-[11px] text-slate-400 truncate mt-1">
@@ -297,32 +292,30 @@ export default function App() {
           <div className="max-w-[400px] mx-auto p-3 rounded-[40px] bg-slate-900 border-[6px] border-slate-700 shadow-2xl mb-8 relative">
             {/* Phone Speaker Notch */}
             <div className="w-24 h-4 bg-slate-800 rounded-full mx-auto mb-3" />
-            
+
             <div className="space-y-4 max-h-[720px] overflow-y-auto pr-1">
               {activeStep === 1 && (
-                <VoicePromptCapture language={selectedLang} onVoiceExtracted={handleVoiceExtracted} />
+                <VoicePromptCapture language={language} onVoiceExtracted={handleVoiceExtracted} />
               )}
               {activeStep === 2 && (
                 <div className="space-y-3">
                   <div className="flex items-center glass-pill p-1 gap-1">
                     <button
                       onClick={() => setStep2SubTab('studio')}
-                      className={`flex-1 py-1 px-2 rounded-full text-[11px] font-semibold flex items-center justify-center gap-1 transition-all ${
-                        step2SubTab === 'studio'
+                      className={`flex-1 py-1 px-2 rounded-full text-[11px] font-semibold flex items-center justify-center gap-1 transition-all ${step2SubTab === 'studio'
                           ? 'bg-[var(--color-terracotta)] text-white'
                           : 'text-gray-400 hover:text-white'
-                      }`}
+                        }`}
                     >
                       <Camera className="w-3 h-3" />
                       <span>Photo Studio</span>
                     </button>
                     <button
                       onClick={() => setStep2SubTab('scanner')}
-                      className={`flex-1 py-1 px-2 rounded-full text-[11px] font-semibold flex items-center justify-center gap-1 transition-all ${
-                        step2SubTab === 'scanner'
+                      className={`flex-1 py-1 px-2 rounded-full text-[11px] font-semibold flex items-center justify-center gap-1 transition-all ${step2SubTab === 'scanner'
                           ? 'bg-[var(--color-saffron)] text-black'
                           : 'text-gray-400 hover:text-white'
-                      }`}
+                        }`}
                     >
                       <Sparkles className="w-3 h-3" />
                       <span>AI Scanner</span>
@@ -339,23 +332,16 @@ export default function App() {
                 </div>
               )}
               {activeStep === 3 && (
-                <div className="p-4 rounded-2xl bg-[#090e1b] border border-slate-800">
-                  <PricingCalculator
-                    initialCost={pricing.rawCost}
-                    initialHours={pricing.laborHours}
-                    onPriceCalculated={setPricing}
-                  />
-                </div>
-              )}
-              {activeStep === 4 && (
                 <>
                   <ONDCPublishModal
                     product={scannedCraft}
+                    pricing={pricing}
                     isOnline={isOnline}
                     onPublishSuccess={handlePublishSuccess}
                     onViewCatalogue={() => setActiveStep(5)}
                   />
                   <StoryCertificate craft={scannedCraft} />
+                  <OfflineSyncQueue isOnline={isOnline} />
                 </>
               )}
               {activeStep === 5 && (
@@ -397,10 +383,15 @@ export default function App() {
         ) : (
           /* Full Dashboard Layout */
           <div className="space-y-6">
-            
+
             {activeStep === 1 && (
-              <div className="max-w-4xl mx-auto">
-                <VoicePromptCapture language={selectedLang} onVoiceExtracted={handleVoiceExtracted} />
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2">
+                  <VoicePromptCapture language={selectedLang} onVoiceExtracted={handleVoiceExtracted} />
+                </div>
+                <div>
+                  <OfflineSyncQueue isOnline={isOnline} />
+                </div>
               </div>
             )}
 
@@ -410,22 +401,20 @@ export default function App() {
                   <div className="flex items-center glass-pill p-1 gap-1">
                     <button
                       onClick={() => setStep2SubTab('studio')}
-                      className={`py-1.5 px-3.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                        step2SubTab === 'studio'
+                      className={`py-1.5 px-3.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all ${step2SubTab === 'studio'
                           ? 'bg-[var(--color-terracotta)] text-white shadow-md'
                           : 'text-gray-400 hover:text-white'
-                      }`}
+                        }`}
                     >
                       <Camera className="w-3.5 h-3.5" />
                       <span>Camera & Hard Drive Photo Studio</span>
                     </button>
                     <button
                       onClick={() => setStep2SubTab('scanner')}
-                      className={`py-1.5 px-3.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                        step2SubTab === 'scanner'
+                      className={`py-1.5 px-3.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all ${step2SubTab === 'scanner'
                           ? 'bg-[var(--color-saffron)] text-black shadow-md'
                           : 'text-gray-400 hover:text-white'
-                      }`}
+                        }`}
                     >
                       <Sparkles className="w-3.5 h-3.5" />
                       <span>Edge AI Vision Scanner & Quality Rating</span>
@@ -452,24 +441,18 @@ export default function App() {
             )}
 
             {activeStep === 3 && (
-              <div className="max-w-3xl mx-auto">
-                <PricingCalculator
-                  initialCost={pricing.rawCost}
-                  initialHours={pricing.laborHours}
-                  onPriceCalculated={setPricing}
-                />
-              </div>
-            )}
-
-            {activeStep === 4 && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <ONDCPublishModal
                   product={scannedCraft}
+                  pricing={pricing}
                   isOnline={isOnline}
                   onPublishSuccess={handlePublishSuccess}
                   onViewCatalogue={() => setActiveStep(5)}
                 />
-                <StoryCertificate craft={scannedCraft} />
+                <div className="space-y-6">
+                  <StoryCertificate craft={scannedCraft} />
+                  <OfflineSyncQueue isOnline={isOnline} />
+                </div>
               </div>
             )}
 
