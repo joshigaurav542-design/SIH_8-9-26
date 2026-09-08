@@ -11,6 +11,13 @@ import OfflineSyncQueue from './components/OfflineSyncQueue';
 import NationalImpactMetrics from './components/NationalImpactMetrics';
 import ArtisanCatalogue, { INITIAL_CATALOGUE } from './components/ArtisanCatalogue';
 import { useLanguage } from './context/LanguageContext';
+import {
+  fetchProducts,
+  saveProductToDatabase,
+  updateProductInDatabase,
+  deleteProductFromDatabase,
+  toggleProductOndcInDatabase
+} from './services/apiService';
 
 export default function App() {
   const { language, setLanguage, t } = useLanguage();
@@ -41,7 +48,7 @@ export default function App() {
   });
   const [step2SubTab, setStep2SubTab] = useState('studio'); // 'studio' | 'scanner'
 
-  // Catalogue state with localStorage persistence
+  // Catalogue state with live Database synchronization and localStorage persistence
   const [catalogueProducts, setCatalogueProducts] = useState(() => {
     try {
       const stored = localStorage.getItem('artisan_catalogue_v1');
@@ -55,6 +62,16 @@ export default function App() {
     return INITIAL_CATALOGUE;
   });
 
+  // Load products from live Database on mount
+  useEffect(() => {
+    fetchProducts().then(({ data, source }) => {
+      console.log(`[Database Sync] Loaded ${data.length} products from: ${source}`);
+      if (data && data.length > 0) {
+        setCatalogueProducts(data);
+      }
+    });
+  }, []);
+
   useEffect(() => {
     try {
       localStorage.setItem('artisan_catalogue_v1', JSON.stringify(catalogueProducts));
@@ -63,28 +80,67 @@ export default function App() {
     }
   }, [catalogueProducts]);
 
-  const handleAddProduct = (newProd) => {
+  const handleAddProduct = async (newProd) => {
+    // 1. Optimistic UI update
     setCatalogueProducts(prev => [newProd, ...prev]);
+
+    // 2. Persist directly to backend database
+    const res = await saveProductToDatabase(newProd);
+    if (res?.product?.id) {
+      // Reconcile with actual database record and ID
+      setCatalogueProducts(prev =>
+        prev.map(p => (p.id === newProd.id ? { ...p, ...res.product } : p))
+      );
+    }
   };
 
   const handleRemoveProduct = (productId) => {
-    setCatalogueProducts(prev => prev.filter(p => p.id !== productId));
+    setCatalogueProducts(prev => prev.filter(p => p.id !== productId && p.sku !== productId));
+    deleteProductFromDatabase(productId);
   };
 
   const handleEditProduct = (updatedProd) => {
     setCatalogueProducts(prev =>
       prev.map(p => (p.id === updatedProd.id ? updatedProd : p))
     );
+    updateProductInDatabase(updatedProd.id || updatedProd.sku, updatedProd);
   };
 
   const handleToggleOndcStatus = (productId) => {
+    let nextStatus = false;
     setCatalogueProducts(prev =>
-      prev.map(p => (p.id === productId ? { ...p, ondcPublished: !p.ondcPublished } : p))
+      prev.map(p => {
+        if (p.id === productId) {
+          nextStatus = !p.ondcPublished;
+          return { ...p, ondcPublished: nextStatus };
+        }
+        return p;
+      })
     );
+    toggleProductOndcInDatabase(productId, nextStatus);
   };
 
-  const handlePublishSuccess = () => {
-    // Automatically add/update the current product in the catalogue
+  const handlePublishSuccess = async () => {
+    // Automatically add/update the current product in the catalogue & database
+    const newEntry = {
+      id: 'prod-' + Date.now(),
+      sku: `ART-${(scannedCraft.id || 'CRAFT').toUpperCase().slice(0, 4)}-${Math.floor(100 + Math.random() * 900)}`,
+      title: scannedCraft.name,
+      category: scannedCraft.category || 'Handicraft',
+      craftStyle: scannedCraft.category || 'Handicraft',
+      material: scannedCraft.material || 'Authentic Regional Materials',
+      dimensions: scannedCraft.dimensions || '30cm x 20cm',
+      weight: scannedCraft.weight || '1,000g',
+      rawCost: pricing.rawCost,
+      laborHours: pricing.laborHours,
+      price: pricing.fairMarketPrice || 1850,
+      ondcPublished: true,
+      giCertified: true,
+      trustBadge: scannedCraft.trustBadge || 'Masterpiece Grade A+ (GI Certified)',
+      image: scannedCraft.image,
+      dateAdded: new Date().toISOString().split('T')[0]
+    };
+
     setCatalogueProducts(prev => {
       const existingIdx = prev.findIndex(p => p.title === scannedCraft.name || p.id === scannedCraft.id);
       if (existingIdx >= 0) {
@@ -95,28 +151,13 @@ export default function App() {
           price: pricing.fairMarketPrice || updated[existingIdx].price,
           image: scannedCraft.image || updated[existingIdx].image
         };
+        updateProductInDatabase(updated[existingIdx].id, updated[existingIdx]);
         return updated;
       }
-      const newEntry = {
-        id: 'prod-' + Date.now(),
-        sku: `ART-${(scannedCraft.id || 'CRAFT').toUpperCase().slice(0, 4)}-${Math.floor(100 + Math.random() * 900)}`,
-        title: scannedCraft.name,
-        category: scannedCraft.category || 'Handicraft',
-        craftStyle: scannedCraft.category || 'Handicraft',
-        material: scannedCraft.material || 'Authentic Regional Materials',
-        dimensions: scannedCraft.dimensions || '30cm x 20cm',
-        weight: scannedCraft.weight || '1,000g',
-        rawCost: pricing.rawCost,
-        laborHours: pricing.laborHours,
-        price: pricing.fairMarketPrice,
-        ondcPublished: true,
-        giCertified: true,
-        trustBadge: scannedCraft.trustBadge || 'Masterpiece Grade A+ (GI Certified)',
-        image: scannedCraft.image,
-        dateAdded: new Date().toISOString().split('T')[0]
-      };
       return [newEntry, ...prev];
     });
+
+    saveProductToDatabase(newEntry);
   };
 
   const handleListingPhotosApplied = (primaryImageUrl, allPhotos) => {

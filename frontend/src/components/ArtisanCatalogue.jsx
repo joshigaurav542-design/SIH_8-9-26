@@ -587,6 +587,9 @@ export default function ArtisanCatalogue({
                         <Award className="w-3 h-3" /> GI TAG
                       </span>
                     )}
+                    <span className="bg-emerald-950/80 backdrop-blur-sm text-emerald-300 text-[9px] font-semibold px-2 py-0.5 rounded-full border border-emerald-500/30 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> DB Synced
+                    </span>
                   </div>
 
                   {/* ONDC Status Badge */}

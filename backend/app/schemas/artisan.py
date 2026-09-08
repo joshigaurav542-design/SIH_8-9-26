@@ -75,18 +75,49 @@ class AuthenticityCertificateSchema(BaseModel):
 class ProductCreate(BaseModel):
     title: str
     description: Optional[str] = None
-    artisan_name: str
-    region: str
-    category: str
-    craft_style: str
-    material: str
-    dimensions: str
-    weight_grams: float = 500.0
-    raw_material_cost: float
-    labor_hours: float
-    skill_level: str = "Master Artisan"
-    price: float
+    artisan_name: Optional[str] = "Master Artisan"
+    region: Optional[str] = "India"
+    category: Optional[str] = "Pottery & Terracotta"
+    craft_style: Optional[str] = None
+    craftStyle: Optional[str] = None
+    material: Optional[str] = "Authentic Regional Materials"
+    dimensions: Optional[str] = "25cm x 15cm x 10cm"
+    weight_grams: Optional[float] = 500.0
+    weight: Optional[Any] = None
+    raw_material_cost: Optional[float] = None
+    rawCost: Optional[float] = None
+    labor_hours: Optional[float] = None
+    laborHours: Optional[float] = None
+    skill_level: Optional[str] = "Master Artisan"
+    price: Optional[float] = 1500.0
     image_url: Optional[str] = None
+    image: Optional[str] = None
+    gi_certified: Optional[bool] = True
+    giCertified: Optional[bool] = None
+    ondc_published: Optional[bool] = True
+    ondcPublished: Optional[bool] = None
+
+class ProductUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    category: Optional[str] = None
+    craft_style: Optional[str] = None
+    craftStyle: Optional[str] = None
+    material: Optional[str] = None
+    dimensions: Optional[str] = None
+    weight_grams: Optional[float] = None
+    weight: Optional[Any] = None
+    raw_material_cost: Optional[float] = None
+    rawCost: Optional[float] = None
+    labor_hours: Optional[float] = None
+    laborHours: Optional[float] = None
+    price: Optional[float] = None
+    image_url: Optional[str] = None
+    image: Optional[str] = None
+    gi_certified: Optional[bool] = None
+    giCertified: Optional[bool] = None
+    ondc_published: Optional[bool] = None
+    ondcPublished: Optional[bool] = None
 
 class ProductOut(BaseModel):
     id: int
@@ -97,8 +128,11 @@ class ProductOut(BaseModel):
     material: str
     dimensions: str
     suggested_price: float
+    raw_material_cost: Optional[float] = 160.0
+    labor_hours: Optional[float] = 8.0
     symmetry_score: float
     trust_badge: str
+    image_url: Optional[str] = None
     ondc_published: bool
     whatsapp_sync: bool
     created_at: datetime
