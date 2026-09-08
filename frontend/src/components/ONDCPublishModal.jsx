@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Send, CheckCircle2, ShoppingBag, MessageSquare, ExternalLink, Globe, Sparkles, RefreshCw } from 'lucide-react';
+import { Send, CheckCircle2, ShoppingBag, MessageSquare, ExternalLink, Globe, Sparkles, RefreshCw, Package } from 'lucide-react';
 
-export default function ONDCPublishModal({ product, isOnline, onPublishSuccess }) {
+export default function ONDCPublishModal({ product, isOnline, onPublishSuccess, onViewCatalogue }) {
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishedData, setPublishedData] = useState(null);
 
@@ -124,10 +124,19 @@ export default function ONDCPublishModal({ product, isOnline, onPublishSuccess }
 
           </div>
 
-          <div className="text-right">
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+            {onViewCatalogue && (
+              <button
+                onClick={onViewCatalogue}
+                className="btn-primary px-4 py-2 text-xs flex items-center gap-1.5 shadow-md font-bold"
+              >
+                <Package className="w-3.5 h-3.5" />
+                <span>View in My Catalogue 📦</span>
+              </button>
+            )}
             <button
               onClick={() => setPublishedData(null)}
-              className="text-xs text-gray-400 hover:text-white underline cursor-pointer"
+              className="text-xs text-gray-400 hover:text-white underline cursor-pointer ml-auto"
             >
               Simulate Another Publication
             </button>

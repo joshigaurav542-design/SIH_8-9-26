@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
-import { Smartphone, Monitor, Sparkles, CheckCircle2, ChevronRight, Layers, Award, ArrowUpRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Smartphone, Monitor, Sparkles, CheckCircle2, ChevronRight, Layers, Award, ArrowUpRight, Camera, Package } from 'lucide-react';
 import Navbar from './components/Navbar';
 import VoicePromptCapture from './components/VoicePromptCapture';
 import VisionScanner from './components/VisionScanner';
+import ListingPhotoStudio from './components/ListingPhotoStudio';
 import PricingCalculator from './components/PricingCalculator';
 import StoryCertificate from './components/StoryCertificate';
 import ONDCPublishModal from './components/ONDCPublishModal';
 import OfflineSyncQueue from './components/OfflineSyncQueue';
 import NationalImpactMetrics from './components/NationalImpactMetrics';
+import ArtisanCatalogue, { INITIAL_CATALOGUE } from './components/ArtisanCatalogue';
 
 export default function App() {
   const [selectedLang, setSelectedLang] = useState('hi-IN');
@@ -36,6 +38,93 @@ export default function App() {
     fairMarketPrice: 1930,
     totalLaborCost: 1449
   });
+  const [step2SubTab, setStep2SubTab] = useState('studio'); // 'studio' | 'scanner'
+
+  // Catalogue state with localStorage persistence
+  const [catalogueProducts, setCatalogueProducts] = useState(() => {
+    try {
+      const stored = localStorage.getItem('artisan_catalogue_v1');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (err) {
+      console.warn('Could not read catalogue from localStorage:', err);
+    }
+    return INITIAL_CATALOGUE;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('artisan_catalogue_v1', JSON.stringify(catalogueProducts));
+    } catch (err) {
+      console.warn('Could not save catalogue to localStorage:', err);
+    }
+  }, [catalogueProducts]);
+
+  const handleAddProduct = (newProd) => {
+    setCatalogueProducts(prev => [newProd, ...prev]);
+  };
+
+  const handleRemoveProduct = (productId) => {
+    setCatalogueProducts(prev => prev.filter(p => p.id !== productId));
+  };
+
+  const handleEditProduct = (updatedProd) => {
+    setCatalogueProducts(prev =>
+      prev.map(p => (p.id === updatedProd.id ? updatedProd : p))
+    );
+  };
+
+  const handleToggleOndcStatus = (productId) => {
+    setCatalogueProducts(prev =>
+      prev.map(p => (p.id === productId ? { ...p, ondcPublished: !p.ondcPublished } : p))
+    );
+  };
+
+  const handlePublishSuccess = () => {
+    // Automatically add/update the current product in the catalogue
+    setCatalogueProducts(prev => {
+      const existingIdx = prev.findIndex(p => p.title === scannedCraft.name || p.id === scannedCraft.id);
+      if (existingIdx >= 0) {
+        const updated = [...prev];
+        updated[existingIdx] = {
+          ...updated[existingIdx],
+          ondcPublished: true,
+          price: pricing.fairMarketPrice || updated[existingIdx].price,
+          image: scannedCraft.image || updated[existingIdx].image
+        };
+        return updated;
+      }
+      const newEntry = {
+        id: 'prod-' + Date.now(),
+        sku: `ART-${(scannedCraft.id || 'CRAFT').toUpperCase().slice(0, 4)}-${Math.floor(100 + Math.random() * 900)}`,
+        title: scannedCraft.name,
+        category: scannedCraft.category || 'Handicraft',
+        craftStyle: scannedCraft.category || 'Handicraft',
+        material: scannedCraft.material || 'Authentic Regional Materials',
+        dimensions: scannedCraft.dimensions || '30cm x 20cm',
+        weight: scannedCraft.weight || '1,000g',
+        rawCost: pricing.rawCost,
+        laborHours: pricing.laborHours,
+        price: pricing.fairMarketPrice,
+        ondcPublished: true,
+        giCertified: true,
+        trustBadge: scannedCraft.trustBadge || 'Masterpiece Grade A+ (GI Certified)',
+        image: scannedCraft.image,
+        dateAdded: new Date().toISOString().split('T')[0]
+      };
+      return [newEntry, ...prev];
+    });
+  };
+
+  const handleListingPhotosApplied = (primaryImageUrl, allPhotos) => {
+    setScannedCraft(prev => ({
+      ...prev,
+      image: primaryImageUrl,
+      galleryImages: allPhotos
+    }));
+  };
 
   const handleVoiceExtracted = (voiceResult) => {
     setCapturedVoice(voiceResult);
@@ -50,9 +139,9 @@ export default function App() {
 
   const steps = [
     { id: 1, label: 'Voice Prompt', hint: 'Vernacular Speech' },
-    { id: 2, label: 'Edge AI Vision', hint: 'Point & Shoot Scan' },
-    { id: 3, label: 'Heritage Pricing', hint: 'Fair Living Wage' },
-    { id: 4, label: 'ONDC Publish', hint: 'Direct Market Sync' }
+    { id: 2, label: 'Edge AI Vision', hint: 'Camera & Hard Drive' },
+    { id: 3, label: 'ONDC Publish', hint: 'Direct Market Sync' },
+    { id: 4, label: 'My Catalogue', hint: `${catalogueProducts.length} Items & Pricing` }
   ];
 
   return (
@@ -83,26 +172,57 @@ export default function App() {
             </p>
           </div>
 
-          {/* Device Simulation Toggle (Desktop vs Mobile Frame) */}
-          <div className="flex items-center glass-pill p-1">
-            <button
-              onClick={() => setIsMobileSimView(false)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                !isMobileSimView ? 'bg-[var(--color-saffron)] text-black' : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              <Monitor className="w-3.5 h-3.5" />
-              <span>Dashboard</span>
-            </button>
-            <button
-              onClick={() => setIsMobileSimView(true)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                isMobileSimView ? 'bg-[var(--color-saffron)] text-black' : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              <Smartphone className="w-3.5 h-3.5" />
-              <span>Mobile Companion</span>
-            </button>
+          {/* View / Mode Toggles */}
+          <div className="flex flex-wrap items-center gap-2">
+            
+            {/* Studio vs Catalogue Switcher */}
+            <div className="flex items-center glass-pill p-1">
+              <button
+                onClick={() => { if (activeStep === 5) setActiveStep(1); }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                  activeStep !== 5
+                    ? 'bg-[var(--color-terracotta)] text-white shadow-md'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>AI Listing Studio</span>
+              </button>
+              <button
+                onClick={() => setActiveStep(5)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                  activeStep === 5
+                    ? 'bg-amber-500 text-black shadow-md'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                <Package className="w-3.5 h-3.5" />
+                <span>Catalogue ({catalogueProducts.length})</span>
+              </button>
+            </div>
+
+            {/* Device Simulation Toggle (Desktop vs Mobile Frame) */}
+            <div className="flex items-center glass-pill p-1">
+              <button
+                onClick={() => setIsMobileSimView(false)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                  !isMobileSimView ? 'bg-[var(--color-saffron)] text-black' : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                <Monitor className="w-3.5 h-3.5" />
+                <span>Dashboard</span>
+              </button>
+              <button
+                onClick={() => setIsMobileSimView(true)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                  isMobileSimView ? 'bg-[var(--color-saffron)] text-black' : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                <Smartphone className="w-3.5 h-3.5" />
+                <span>Mobile Companion</span>
+              </button>
+            </div>
+
           </div>
         </div>
 
@@ -149,23 +269,65 @@ export default function App() {
                 <VoicePromptCapture language={selectedLang} onVoiceExtracted={handleVoiceExtracted} />
               )}
               {activeStep === 2 && (
-                <VisionScanner onScanComplete={setScannedCraft} />
+                <div className="space-y-3">
+                  <div className="flex items-center glass-pill p-1 gap-1">
+                    <button
+                      onClick={() => setStep2SubTab('studio')}
+                      className={`flex-1 py-1 px-2 rounded-full text-[11px] font-semibold flex items-center justify-center gap-1 transition-all ${
+                        step2SubTab === 'studio'
+                          ? 'bg-[var(--color-terracotta)] text-white'
+                          : 'text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      <Camera className="w-3 h-3" />
+                      <span>Photo Studio</span>
+                    </button>
+                    <button
+                      onClick={() => setStep2SubTab('scanner')}
+                      className={`flex-1 py-1 px-2 rounded-full text-[11px] font-semibold flex items-center justify-center gap-1 transition-all ${
+                        step2SubTab === 'scanner'
+                          ? 'bg-[var(--color-saffron)] text-black'
+                          : 'text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      <span>AI Scanner</span>
+                    </button>
+                  </div>
+
+                  {step2SubTab === 'studio' ? (
+                    <ListingPhotoStudio
+                      onApplyToListing={handleListingPhotosApplied}
+                    />
+                  ) : (
+                    <VisionScanner onScanComplete={setScannedCraft} />
+                  )}
+                </div>
               )}
               {activeStep === 3 && (
                 <>
-                  <PricingCalculator
-                    initialCost={pricing.rawCost}
-                    initialHours={pricing.laborHours}
-                    onPriceCalculated={setPricing}
+                  <ONDCPublishModal
+                    product={scannedCraft}
+                    isOnline={isOnline}
+                    onPublishSuccess={handlePublishSuccess}
+                    onViewCatalogue={() => setActiveStep(4)}
                   />
                   <StoryCertificate craft={scannedCraft} />
+                  <OfflineSyncQueue isOnline={isOnline} />
                 </>
               )}
               {activeStep === 4 && (
-                <>
-                  <ONDCPublishModal product={scannedCraft} isOnline={isOnline} />
-                  <OfflineSyncQueue isOnline={isOnline} />
-                </>
+                <ArtisanCatalogue
+                  products={catalogueProducts}
+                  onAddProduct={handleAddProduct}
+                  onRemoveProduct={handleRemoveProduct}
+                  onEditProduct={handleEditProduct}
+                  onToggleOndcStatus={handleToggleOndcStatus}
+                  onCreateNewListing={() => setActiveStep(1)}
+                  pricing={pricing}
+                  onPriceCalculated={setPricing}
+                  scannedCraft={scannedCraft}
+                />
               )}
             </div>
 
@@ -205,32 +367,84 @@ export default function App() {
             )}
 
             {activeStep === 2 && (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2">
-                  <VisionScanner onScanComplete={setScannedCraft} />
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center glass-pill p-1 gap-1">
+                    <button
+                      onClick={() => setStep2SubTab('studio')}
+                      className={`py-1.5 px-3.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                        step2SubTab === 'studio'
+                          ? 'bg-[var(--color-terracotta)] text-white shadow-md'
+                          : 'text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      <Camera className="w-3.5 h-3.5" />
+                      <span>Camera & Hard Drive Photo Studio</span>
+                    </button>
+                    <button
+                      onClick={() => setStep2SubTab('scanner')}
+                      className={`py-1.5 px-3.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                        step2SubTab === 'scanner'
+                          ? 'bg-[var(--color-saffron)] text-black shadow-md'
+                          : 'text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Edge AI Vision Scanner & Quality Rating</span>
+                    </button>
+                  </div>
+
+                  <span className="text-xs text-gray-400 hidden sm:inline">
+                    {step2SubTab === 'studio'
+                      ? 'Live camera capture & hard drive image upload for ONDC'
+                      : 'On-device automated dimension & defect analysis'}
+                  </span>
                 </div>
-                <div>
-                  <OfflineSyncQueue isOnline={isOnline} />
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div className="lg:col-span-2">
+                    {step2SubTab === 'studio' ? (
+                      <ListingPhotoStudio
+                        onApplyToListing={handleListingPhotosApplied}
+                      />
+                    ) : (
+                      <VisionScanner onScanComplete={setScannedCraft} />
+                    )}
+                  </div>
+                  <div>
+                    <OfflineSyncQueue isOnline={isOnline} />
+                  </div>
                 </div>
               </div>
             )}
 
             {activeStep === 3 && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <PricingCalculator
-                  initialCost={pricing.rawCost}
-                  initialHours={pricing.laborHours}
-                  onPriceCalculated={setPricing}
+                <ONDCPublishModal
+                  product={scannedCraft}
+                  isOnline={isOnline}
+                  onPublishSuccess={handlePublishSuccess}
+                  onViewCatalogue={() => setActiveStep(4)}
                 />
-                <StoryCertificate craft={scannedCraft} />
+                <div className="space-y-6">
+                  <StoryCertificate craft={scannedCraft} />
+                  <OfflineSyncQueue isOnline={isOnline} />
+                </div>
               </div>
             )}
 
             {activeStep === 4 && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <ONDCPublishModal product={scannedCraft} isOnline={isOnline} />
-                <OfflineSyncQueue isOnline={isOnline} />
-              </div>
+              <ArtisanCatalogue
+                products={catalogueProducts}
+                onAddProduct={handleAddProduct}
+                onRemoveProduct={handleRemoveProduct}
+                onEditProduct={handleEditProduct}
+                onToggleOndcStatus={handleToggleOndcStatus}
+                onCreateNewListing={() => setActiveStep(1)}
+                pricing={pricing}
+                onPriceCalculated={setPricing}
+                scannedCraft={scannedCraft}
+              />
             )}
 
             {/* National Impact Metrics on every view */}

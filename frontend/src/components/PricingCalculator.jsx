@@ -53,7 +53,7 @@ export default function PricingCalculator({ initialCost = 160, initialHours = 9,
             3
           </span>
           <h2 className="text-base font-bold text-white font-heading">
-            Heritage Pricing Engine (PM Vishwakarma Living Wage)
+            Pricing Suggestion & Living Wage Engine (PM Vishwakarma)
           </h2>
         </div>
         <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
