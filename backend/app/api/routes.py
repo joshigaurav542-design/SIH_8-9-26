@@ -234,6 +234,18 @@ def ondc_beckn_search(payload: Dict[str, Any], db: Session = Depends(get_db)):
 @router.post("/sync/batch", response_model=OfflineSyncBatchResponse)
 def sync_offline_batch(req: OfflineSyncBatchRequest, db: Session = Depends(get_db)):
     count = 0
+    artisan = db.query(Artisan).first()
+    if not artisan:
+        artisan = Artisan(
+            artisan_id=f"ART-{uuid.uuid4().hex[:6].upper()}",
+            name="Ramprasad Prajapati",
+            craft_type="Pottery & Terracotta",
+            region="Gorakhpur / Varanasi, Uttar Pradesh"
+        )
+        db.add(artisan)
+        db.commit()
+        db.refresh(artisan)
+
     for item in req.pending_items:
         log_entry = OfflineSyncLog(
             client_device_id=req.device_id,
@@ -242,6 +254,45 @@ def sync_offline_batch(req: OfflineSyncBatchRequest, db: Session = Depends(get_d
             status="SYNCED"
         )
         db.add(log_entry)
+
+        # If payload contains product data, persist or update in products table
+        if isinstance(item.data, dict) and item.action in ("CREATE_PRODUCT", "ONDC_PUBLISH", "SYNC_CATALOGUE"):
+            prod_data = item.data
+            sku = prod_data.get("sku")
+            existing = db.query(Product).filter(Product.sku == sku).first() if sku else None
+            
+            if not existing:
+                new_prod = Product(
+                    sku=sku or f"SKU-{uuid.uuid4().hex[:6].upper()}",
+                    title=prod_data.get("title", "Artisan Heritage Craft"),
+                    description=prod_data.get("description", "Handcrafted traditional item."),
+                    artisan_id=artisan.id,
+                    category=prod_data.get("category", "Handicrafts"),
+                    craft_style=prod_data.get("craft_style", prod_data.get("craftStyle", "Traditional Handmade")),
+                    material=prod_data.get("material", "Authentic Regional Materials"),
+                    dimensions=prod_data.get("dimensions", "30cm x 20cm"),
+                    weight_grams=float(prod_data.get("weight_grams", 850.0)),
+                    symmetry_score=float(prod_data.get("symmetry_score", 96.4)),
+                    density_score=float(prod_data.get("density_score", 94.1)),
+                    trust_badge=prod_data.get("trust_badge", "Artisan Verified (PM Vishwakarma)"),
+                    raw_material_cost=float(prod_data.get("raw_material_cost", prod_data.get("rawCost", 160.0))),
+                    labor_hours=float(prod_data.get("labor_hours", prod_data.get("laborHours", 8.0))),
+                    fair_labor_cost=float(prod_data.get("fair_labor_cost", 1200.0)),
+                    suggested_price=float(prod_data.get("price", prod_data.get("suggested_price", 1850.0))),
+                    image_url=prod_data.get("image_url", prod_data.get("image", "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?auto=format&fit=crop&w=600&q=80")),
+                    ondc_published=bool(prod_data.get("ondc_published", prod_data.get("ondcPublished", False))),
+                    whatsapp_sync=bool(prod_data.get("whatsapp_sync", False))
+                )
+                db.add(new_prod)
+            else:
+                if "price" in prod_data:
+                    try:
+                        existing.suggested_price = float(prod_data["price"])
+                    except (ValueError, TypeError):
+                        pass
+                if "ondcPublished" in prod_data or "ondc_published" in prod_data:
+                    existing.ondc_published = bool(prod_data.get("ondcPublished", prod_data.get("ondc_published")))
+
         count += 1
     db.commit()
     

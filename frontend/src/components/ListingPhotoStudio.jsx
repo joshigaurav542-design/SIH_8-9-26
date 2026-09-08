@@ -162,28 +162,49 @@ export default function ListingPhotoStudio({
         cameraStream.getTracks().forEach(track => track.stop());
       }
 
-      const constraints = {
-        video: {
-          facingMode: facing,
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
-        },
-        audio: false
-      };
-
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      setCameraStream(stream);
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
+      if (!navigator?.mediaDevices?.getUserMedia) {
+        throw new Error('Your browser or device does not support camera access. Please use Chrome, Edge, Safari, or upload photos from your hard drive.');
       }
+
+      // Multi-tier fallback constraints:
+      // 1. Try requested facingMode with high resolution
+      // 2. Fallback to requested facingMode without rigid resolution
+      // 3. Fallback to any default camera available on device
+      let stream = null;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: facing ? { ideal: facing } : 'user',
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          },
+          audio: false
+        });
+      } catch (err1) {
+        console.warn('Ideal resolution camera failed, trying facingMode fallback:', err1);
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: facing ? { facingMode: facing } : true,
+            audio: false
+          });
+        } catch (err2) {
+          console.warn('FacingMode camera failed, falling back to any video camera:', err2);
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: false
+          });
+        }
+      }
+
+      setCameraStream(stream);
       setCameraActive(true);
       setFreezeFrame(null);
     } catch (err) {
       console.warn('Camera access denied or unavailable:', err);
       setCameraError(
-        err.name === 'NotAllowedError'
-          ? 'Camera permission denied. Please allow camera access in browser settings or upload photos from your hard drive.'
-          : 'Unable to access device camera. Please check your camera connection or upload files directly from your hard drive.'
+        err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError'
+          ? 'Camera permission denied. Please click the camera/lock icon in your browser address bar to allow camera access.'
+          : err.message || 'Unable to access device camera. Please check your camera connection or upload files directly from your hard drive.'
       );
       setCameraActive(false);
     }
@@ -196,6 +217,16 @@ export default function ListingPhotoStudio({
     }
     setCameraActive(false);
   }, [cameraStream]);
+
+  // Ensure camera stream is immediately attached to video element when mounted
+  useEffect(() => {
+    if (videoRef.current && cameraStream && cameraActive) {
+      videoRef.current.srcObject = cameraStream;
+      videoRef.current.play().catch(err => {
+        console.warn('Video auto-play handled:', err);
+      });
+    }
+  }, [cameraStream, cameraActive]);
 
   // Switch camera tab lifecycle
   useEffect(() => {
@@ -517,40 +548,46 @@ export default function ListingPhotoStudio({
                   alt="Captured freeze preview"
                   className="w-full h-full object-cover"
                 />
-              ) : cameraActive ? (
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="w-full h-full object-cover"
-                />
               ) : (
-                <div className="text-center p-6 max-w-sm">
-                  <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-3">
-                    <Camera className="w-7 h-7 text-gray-400 animate-pulse" />
-                  </div>
-                  <h4 className="text-sm font-bold text-white mb-1">Camera Stream Standby</h4>
-                  <p className="text-xs text-gray-400 mb-4">
-                    {cameraError || 'Allow camera access to capture crisp product shots for your online listing.'}
-                  </p>
-                  <div className="flex justify-center gap-2">
-                    <button
-                      onClick={() => startCamera()}
-                      className="btn-primary px-3.5 py-1.5 text-xs flex items-center gap-1.5"
-                    >
-                      <RefreshCw className="w-3.5 h-3.5" />
-                      <span>Start Camera</span>
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('harddrive')}
-                      className="btn-secondary px-3.5 py-1.5 text-xs flex items-center gap-1.5"
-                    >
-                      <HardDrive className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>Use Hard Drive</span>
-                    </button>
-                  </div>
-                </div>
+                <>
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    onLoadedMetadata={() => videoRef.current?.play().catch(() => {})}
+                    className={`w-full h-full object-cover ${cameraActive ? 'block' : 'hidden'}`}
+                  />
+                  {!cameraActive && (
+                    <div className="text-center p-6 max-w-sm">
+                      <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-3">
+                        <Camera className="w-7 h-7 text-gray-400 animate-pulse" />
+                      </div>
+                      <h4 className="text-sm font-bold text-white mb-1">Camera Stream Standby</h4>
+                      <p className="text-xs text-gray-400 mb-4">
+                        {cameraError || 'Allow camera access to capture crisp product shots for your online listing.'}
+                      </p>
+                      <div className="flex justify-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => startCamera()}
+                          className="btn-primary px-3.5 py-1.5 text-xs flex items-center gap-1.5"
+                        >
+                          <RefreshCw className="w-3.5 h-3.5" />
+                          <span>Start Camera</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('harddrive')}
+                          className="btn-secondary px-3.5 py-1.5 text-xs flex items-center gap-1.5"
+                        >
+                          <HardDrive className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>Use Hard Drive</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
 
               {/* Viewfinder Rule of Thirds Grid Overlay */}

@@ -46,6 +46,111 @@ export default function VisionScanner({ onScanComplete }) {
   const [scanResult, setScanResult] = useState(CRAFT_SAMPLES[0]);
   const fileInputRef = useRef(null);
 
+  // Live Camera states
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const [cameraStream, setCameraStream] = useState(null);
+  const [cameraError, setCameraError] = useState(null);
+
+  const startCamera = async () => {
+    setCameraError(null);
+    try {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(t => t.stop());
+      }
+      if (!navigator?.mediaDevices?.getUserMedia) {
+        throw new Error('Camera access not supported by browser.');
+      }
+      let stream = null;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false
+        });
+      } catch (e1) {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment' },
+            audio: false
+          });
+        } catch (e2) {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: false
+          });
+        }
+      }
+      setCameraStream(stream);
+      setIsCameraActive(true);
+    } catch (err) {
+      console.warn('Camera error in VisionScanner:', err);
+      setCameraError('Unable to access camera. Please allow camera permissions or upload photo.');
+      setIsCameraActive(false);
+    }
+  };
+
+  const stopCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(t => t.stop());
+      setCameraStream(null);
+    }
+    setIsCameraActive(false);
+  };
+
+  useEffect(() => {
+    if (videoRef.current && cameraStream && isCameraActive) {
+      videoRef.current.srcObject = cameraStream;
+      videoRef.current.play().catch(e => console.warn('Video play error:', e));
+    }
+  }, [cameraStream, isCameraActive]);
+
+  useEffect(() => {
+    return () => {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(t => t.stop());
+      }
+    };
+  }, [cameraStream]);
+
+  const captureCameraCraft = () => {
+    if (!videoRef.current || !canvasRef.current) return;
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const width = video.videoWidth || 1280;
+    const height = video.videoHeight || 720;
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, width, height);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+
+    const customCraft = {
+      id: 'cam-' + Date.now(),
+      name: 'Live Scanned Craft',
+      category: 'Artisan Heritage Craft',
+      material: 'Authentic Handcrafted Material',
+      dimensions: '30cm x 22cm x 15cm',
+      weight: '800g',
+      symmetry: (95.0 + Math.random() * 4.0).toFixed(1),
+      density: (94.0 + Math.random() * 4.5).toFixed(1),
+      trustBadge: 'Artisan Verified (AI Verified)',
+      image: dataUrl
+    };
+
+    stopCamera();
+    setSelectedCraft(customCraft);
+    setIsScanning(true);
+
+    setTimeout(() => {
+      setIsScanning(false);
+      setScanResult(customCraft);
+      if (onScanComplete) {
+        onScanComplete(customCraft);
+      }
+    }, 1500);
+  };
+
   const handleFileUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -65,6 +170,7 @@ export default function VisionScanner({ onScanComplete }) {
         image: event.target.result
       };
 
+      stopCamera();
       setSelectedCraft(customCraft);
       setIsScanning(true);
 
@@ -81,6 +187,7 @@ export default function VisionScanner({ onScanComplete }) {
 
   const handleTriggerScan = (craft) => {
     const target = craft || selectedCraft;
+    stopCamera();
     setSelectedCraft(target);
     setIsScanning(true);
 
@@ -95,7 +202,7 @@ export default function VisionScanner({ onScanComplete }) {
 
   return (
     <div className="glass-panel p-5 relative overflow-hidden">
-      
+
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
@@ -122,15 +229,31 @@ export default function VisionScanner({ onScanComplete }) {
           <button
             key={sample.id}
             onClick={() => handleTriggerScan(sample)}
-            className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-              selectedCraft.id === sample.id
+            className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${selectedCraft.id === sample.id
                 ? 'bg-[var(--color-terracotta)] text-white shadow-sm'
                 : 'glass-pill text-gray-300 hover:text-white'
-            }`}
+              }`}
           >
             {sample.name.split(' ')[0]} {sample.name.split(' ')[1]}
           </button>
         ))}
+
+        {/* Live Camera Scanner Button */}
+        <button
+          type="button"
+          onClick={() => {
+            if (isCameraActive) stopCamera();
+            else startCamera();
+          }}
+          className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm ${isCameraActive
+              ? 'bg-rose-600/30 text-rose-300 border border-rose-500/50'
+              : 'bg-amber-600/30 hover:bg-amber-600/50 text-amber-300 border border-amber-500/40'
+            }`}
+          title="Open your device camera to scan craft"
+        >
+          <Camera className="w-3.5 h-3.5" />
+          <span>{isCameraActive ? 'Close Camera' : 'Live Camera Scan'}</span>
+        </button>
 
         {/* Custom Photo Upload Button */}
         <input
@@ -150,29 +273,43 @@ export default function VisionScanner({ onScanComplete }) {
         </button>
       </div>
 
+      {/* Hidden canvas for video frame capture */}
+      <canvas ref={canvasRef} className="hidden" />
+
       {/* Camera Viewport / Scanning Canvas */}
       <div className="relative rounded-2xl overflow-hidden aspect-[16/10] bg-black border border-[var(--border-glass)] group shadow-2xl mb-4">
-        
-        {/* Craft Image */}
-        <img
-          src={selectedCraft.image}
-          alt={selectedCraft.name}
-          className="w-full h-full object-cover opacity-90 transition-transform duration-700 group-hover:scale-105"
-        />
+
+        {/* Live Video Feed or Craft Image */}
+        {isCameraActive ? (
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            onLoadedMetadata={() => videoRef.current?.play().catch(() => { })}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <img
+            src={selectedCraft.image}
+            alt={selectedCraft.name}
+            className="w-full h-full object-cover opacity-90 transition-transform duration-700 group-hover:scale-105"
+          />
+        )}
 
         {/* Laser Sweep Animation when Scanning */}
         {isScanning && <div className="laser-line" />}
 
         {/* Bounding Box & HUD Elements */}
         <div className="absolute inset-4 sm:inset-8 border-2 border-dashed border-[var(--color-saffron)] rounded-xl pointer-events-none transition-all flex flex-col justify-between p-2 sm:p-3">
-          
+
           <div className="flex items-center justify-between text-[11px] font-mono text-[var(--color-saffron)] bg-black/60 px-2 py-1 rounded backdrop-blur-sm self-start">
             <Scan className="w-3 h-3 mr-1 animate-pulse" />
-            <span>YOLOv8-Nano: {selectedCraft.category} (99.1%)</span>
+            <span>{isCameraActive ? 'LIVE CAMERA SCANNER' : `YOLOv8-Nano: ${selectedCraft.category} (99.1%)`}</span>
           </div>
 
           <div className="flex items-center justify-between text-[10px] font-mono text-gray-200 bg-black/60 px-2 py-1 rounded backdrop-blur-sm self-end">
-            <span>DIM: {selectedCraft.dimensions}</span>
+            <span>{isCameraActive ? 'AUTO-FOCUS ACTIVE' : `DIM: ${selectedCraft.dimensions}`}</span>
           </div>
         </div>
 
@@ -183,9 +320,19 @@ export default function VisionScanner({ onScanComplete }) {
               <RefreshCw className="w-3.5 h-3.5 animate-spin" />
               <span>Analyzing craft symmetry & weave density...</span>
             </div>
+          ) : isCameraActive ? (
+            <button
+              type="button"
+              onClick={captureCameraCraft}
+              className="btn-primary px-4 py-2 text-xs flex items-center gap-2 shadow-xl bg-[var(--color-saffron)] text-black font-bold"
+            >
+              <Camera className="w-4 h-4" />
+              <span>Snap & Analyze Craft</span>
+            </button>
           ) : (
             <>
               <button
+                type="button"
                 onClick={() => handleTriggerScan()}
                 className="btn-primary px-3.5 py-1.5 text-xs flex items-center gap-1.5 shadow-lg"
               >
@@ -193,6 +340,15 @@ export default function VisionScanner({ onScanComplete }) {
                 <span>Re-Scan Craft</span>
               </button>
               <button
+                type="button"
+                onClick={() => startCamera()}
+                className="btn-secondary px-3.5 py-1.5 text-xs flex items-center gap-1.5 shadow-lg bg-amber-600/20 text-amber-300 border border-amber-500/30"
+              >
+                <Camera className="w-3.5 h-3.5 text-amber-400" />
+                <span>Open Live Camera</span>
+              </button>
+              <button
+                type="button"
                 onClick={() => fileInputRef.current?.click()}
                 className="btn-secondary px-3.5 py-1.5 text-xs flex items-center gap-1.5 shadow-lg bg-black/70 hover:bg-black/90 backdrop-blur-md text-white border border-white/20"
               >
@@ -207,7 +363,7 @@ export default function VisionScanner({ onScanComplete }) {
       {/* Quality Rating Metrics (Slide 2: Visual Quality Rating) */}
       {scanResult && !isScanning && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          
+
           {/* Symmetry Score */}
           <div className="p-3 rounded-xl bg-black/30 border border-[var(--border-glass)]">
             <div className="flex items-center justify-between text-xs text-gray-400 mb-1">

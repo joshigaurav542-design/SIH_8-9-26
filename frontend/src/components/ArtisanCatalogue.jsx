@@ -101,14 +101,31 @@ export default function ArtisanCatalogue({
       if (spotCameraStream) {
         spotCameraStream.getTracks().forEach(t => t.stop());
       }
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: false
-      });
-      setSpotCameraStream(stream);
-      if (spotVideoRef.current) {
-        spotVideoRef.current.srcObject = stream;
+      if (!navigator?.mediaDevices?.getUserMedia) {
+        throw new Error('Your browser or device does not support camera access.');
       }
+
+      let stream = null;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false
+        });
+      } catch (e1) {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment' },
+            audio: false
+          });
+        } catch (e2) {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: false
+          });
+        }
+      }
+
+      setSpotCameraStream(stream);
       setSpotCameraActive(true);
     } catch (err) {
       console.warn('Spot camera access error:', err);
@@ -130,13 +147,31 @@ export default function ArtisanCatalogue({
     setIsSpotCameraOpen(true);
     setTimeout(() => {
       startSpotCamera();
-    }, 150);
+    }, 100);
   };
 
   const closeSpotCamera = () => {
     stopSpotCamera();
     setIsSpotCameraOpen(false);
   };
+
+  // Bind spot camera stream to video element
+  useEffect(() => {
+    if (spotVideoRef.current && spotCameraStream && isSpotCameraOpen) {
+      spotVideoRef.current.srcObject = spotCameraStream;
+      spotVideoRef.current.play().catch(e => console.warn('Spot video playback:', e));
+    }
+  }, [spotCameraStream, isSpotCameraOpen]);
+
+  // Clean up spot camera on unmount
+  useEffect(() => {
+    return () => {
+      if (spotCameraStream) {
+        spotCameraStream.getTracks().forEach(t => t.stop());
+      }
+    };
+  }, [spotCameraStream]);
+
 
   const captureSpotPhoto = () => {
     if (!spotVideoRef.current || !spotCanvasRef.current) return;

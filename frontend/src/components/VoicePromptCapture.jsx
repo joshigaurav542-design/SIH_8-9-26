@@ -107,7 +107,8 @@ const PRESETS = {
 
 export default function VoicePromptCapture({ language: propLang, onVoiceExtracted }) {
   const { language: ctxLang, t } = useLanguage();
-  const activeLang = propLang || ctxLang || 'hi-IN';
+  const [localLang, setLocalLang] = useState(propLang || ctxLang || 'hi-IN');
+  const activeLang = localLang;
 
   const [transcript, setTranscript] = useState('');
   const [extractedData, setExtractedData] = useState(null);
@@ -421,6 +422,20 @@ export default function VoicePromptCapture({ language: propLang, onVoiceExtracte
           >
             {t('voice.trySample', 'Try Sample Prompt')}
           </button>
+
+          {/* Voice AI Language Selector */}
+          <select
+            value={activeLang}
+            onChange={(e) => setLocalLang(e.target.value)}
+            className="btn-secondary px-2 py-2 text-xs bg-black/40 border border-white/10 rounded-xl focus:outline-none focus:border-[var(--color-saffron)] text-gray-200"
+            title="Select voice language"
+          >
+            {Object.entries(PRESETS).map(([code, presetData]) => (
+              <option key={code} value={code}>
+                {presetData.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         {isProcessing && (
