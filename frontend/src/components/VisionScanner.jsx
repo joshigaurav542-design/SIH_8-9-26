@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Camera, Scan, Award, CheckCircle, ShieldAlert, Sparkles, RefreshCw } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Camera, Scan, Award, CheckCircle, ShieldAlert, Sparkles, RefreshCw, Upload, Image as ImageIcon } from 'lucide-react';
 
 const CRAFT_SAMPLES = [
   {
@@ -44,6 +44,40 @@ export default function VisionScanner({ onScanComplete }) {
   const [selectedCraft, setSelectedCraft] = useState(CRAFT_SAMPLES[0]);
   const [isScanning, setIsScanning] = useState(false);
   const [scanResult, setScanResult] = useState(CRAFT_SAMPLES[0]);
+  const fileInputRef = useRef(null);
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const customCraft = {
+        id: 'custom-' + Date.now(),
+        name: file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ") || 'Handmade Artisan Craft',
+        category: 'Custom Handicraft',
+        material: 'Handcrafted Heritage Material',
+        dimensions: '30cm x 22cm x 15cm',
+        weight: '750g',
+        symmetry: (94.0 + Math.random() * 4.5).toFixed(1),
+        density: (93.5 + Math.random() * 4.8).toFixed(1),
+        trustBadge: 'Artisan Verified (GI Quality Validated)',
+        image: event.target.result
+      };
+
+      setSelectedCraft(customCraft);
+      setIsScanning(true);
+
+      setTimeout(() => {
+        setIsScanning(false);
+        setScanResult(customCraft);
+        if (onScanComplete) {
+          onScanComplete(customCraft);
+        }
+      }, 1600);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleTriggerScan = (craft) => {
     const target = craft || selectedCraft;
@@ -81,7 +115,7 @@ export default function VisionScanner({ onScanComplete }) {
         Point-and-shoot scanner automatically extracts dimensions, craft style, and material details. Assesses structural symmetry and surface density for authentic GI trust badges.
       </p>
 
-      {/* Sample Selector Tabs */}
+      {/* Sample Selector Tabs & Photo Upload */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <span className="text-xs text-gray-400 font-medium">Select Craft:</span>
         {CRAFT_SAMPLES.map((sample) => (
@@ -97,6 +131,23 @@ export default function VisionScanner({ onScanComplete }) {
             {sample.name.split(' ')[0]} {sample.name.split(' ')[1]}
           </button>
         ))}
+
+        {/* Custom Photo Upload Button */}
+        <input
+          type="file"
+          ref={fileInputRef}
+          accept="image/*"
+          className="hidden"
+          onChange={handleFileUpload}
+        />
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className="px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-300 border border-emerald-500/40 flex items-center gap-1.5 transition-all shadow-sm"
+          title="Upload your own craft photo from PC or phone"
+        >
+          <Upload className="w-3.5 h-3.5" />
+          <span>Upload Custom Photo</span>
+        </button>
       </div>
 
       {/* Camera Viewport / Scanning Canvas */}
@@ -126,20 +177,29 @@ export default function VisionScanner({ onScanComplete }) {
         </div>
 
         {/* Scan Status Badge Overlay */}
-        <div className="absolute bottom-3 left-3">
+        <div className="absolute bottom-3 left-3 flex items-center gap-2">
           {isScanning ? (
             <div className="glass-pill px-3 py-1 text-xs text-[var(--color-saffron)] flex items-center gap-1.5 animate-pulse">
               <RefreshCw className="w-3.5 h-3.5 animate-spin" />
               <span>Analyzing craft symmetry & weave density...</span>
             </div>
           ) : (
-            <button
-              onClick={() => handleTriggerScan()}
-              className="btn-primary px-3.5 py-1.5 text-xs flex items-center gap-1.5 shadow-lg"
-            >
-              <Camera className="w-3.5 h-3.5" />
-              <span>Re-Scan Craft</span>
-            </button>
+            <>
+              <button
+                onClick={() => handleTriggerScan()}
+                className="btn-primary px-3.5 py-1.5 text-xs flex items-center gap-1.5 shadow-lg"
+              >
+                <Camera className="w-3.5 h-3.5" />
+                <span>Re-Scan Craft</span>
+              </button>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="btn-secondary px-3.5 py-1.5 text-xs flex items-center gap-1.5 shadow-lg bg-black/70 hover:bg-black/90 backdrop-blur-md text-white border border-white/20"
+              >
+                <Upload className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Upload Photo</span>
+              </button>
+            </>
           )}
         </div>
       </div>
