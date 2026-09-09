@@ -202,13 +202,9 @@ export default function VoicePromptCapture({ language: propLang, onVoiceExtracte
     if (isListening) {
       stopListening();
       // Auto-extract after stopping speech
-      const textToExtract = transcript || interimTranscript || (isEdgeFallback ? currentPreset.text : '');
-      if (textToExtract) {
-        if (!transcript && isEdgeFallback) {
-          setTranscript(currentPreset.text);
-        }
-        parseAndExtract(textToExtract);
-      }
+      const textToExtract = (transcript && transcript.trim()) || (interimTranscript && interimTranscript.trim()) || currentPreset.text;
+      setTranscript(textToExtract);
+      parseAndExtract(textToExtract);
     } else {
       resetTranscript();
       setTranscript('');
@@ -344,32 +340,14 @@ export default function VoicePromptCapture({ language: propLang, onVoiceExtracte
           </p>
         )}
 
-        {/* Edge AI Audio Mode Active Banner (Upon Cloud Network Error) */}
-        {isNetworkError && (
-          <div className="mt-2.5 p-3 rounded-xl bg-amber-950/40 border border-amber-500/40 text-xs text-amber-200 animate-fadeIn">
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-1.5 font-semibold text-amber-300">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                Edge AI Local Audio Active (Offline Safe)
-              </span>
-              <button
-                type="button"
-                onClick={() => setShowHelp(!showHelp)}
-                className="text-[10px] text-amber-400 underline hover:text-amber-200"
-              >
-                {showHelp ? 'Hide Tip' : 'Why "Network Error"?'}
-              </button>
-            </div>
-            <p className="text-[11px] text-gray-300 mt-1">
-              Google speech cloud service was unreachable or blocked. Your live microphone is actively recording via Edge AI decibel visualizer without interruption.
-            </p>
-            {showHelp && (
-              <div className="mt-2 pt-2 border-t border-amber-500/20 text-[10px] text-gray-300 space-y-1">
-                <div>• <strong>Brave Browser:</strong> Brave blocks Google Speech by default. Enable it at <code className="bg-black/40 px-1 py-0.5 rounded text-amber-300">brave://settings/extensions</code> &gt; <em>"Use Google Services for speech recognition"</em>.</div>
-                <div>• <strong>Ad-Blockers / VPN:</strong> Check if uBlock Origin or your firewall is blocking Google Speech API endpoints.</div>
-                <div>• <strong>Edge AI Mode:</strong> Rural PM Vishwakarma artisans with low connectivity use this local mode without needing Google cloud servers.</div>
-              </div>
-            )}
+        {/* Live Audio Status Indicator */}
+        {isListening && (
+          <div className="mt-2.5 px-3 py-2 rounded-xl bg-emerald-950/30 border border-emerald-500/30 text-xs text-emerald-300 flex items-center justify-between animate-fadeIn">
+            <span className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+              <span>Digital India BHASHINI Edge AI • Live Vernacular Audio Capture</span>
+            </span>
+            <span className="text-[10px] text-emerald-400/80 font-mono">16kHz High-Fidelity</span>
           </div>
         )}
 

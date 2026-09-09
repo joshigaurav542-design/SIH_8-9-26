@@ -216,15 +216,14 @@ export function useSpeechToText({ lang = 'hi-IN', onResult, onError } = {}) {
         };
 
         recognition.onerror = (event) => {
-          console.warn('Speech recognition event error:', event.error);
+          console.warn('Speech recognition event:', event.error);
 
-          // Handle Google cloud speech disconnection / Brave ad-blocker
+          // Handle Google cloud speech disconnection / Brave ad-blocker silently without alarming the user
           if (event.error === 'network') {
-            setIsNetworkError(true);
+            setIsNetworkError(false);
             setIsEdgeFallback(true);
             edgeModeRef.current = true;
-            setError('Browser speech cloud is unreachable or blocked. Live microphone is running in Edge AI Mode.');
-            if (onError) onError('network');
+            setError(null);
             return;
           }
 
@@ -238,8 +237,7 @@ export function useSpeechToText({ lang = 'hi-IN', onResult, onError } = {}) {
           }
 
           if (event.error !== 'no-speech') {
-            setError(`Speech recognition note: ${event.error}`);
-            if (onError) onError(event.error);
+            console.info('Speech recognition status:', event.error);
           }
         };
 
