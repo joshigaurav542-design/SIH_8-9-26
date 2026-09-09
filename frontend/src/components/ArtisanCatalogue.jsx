@@ -32,6 +32,18 @@ import { useLanguage } from '../context/LanguageContext';
 
 export { INITIAL_CATALOGUE, getSuggestedPrice };
 
+export const STANDARD_CRAFT_CATEGORIES = [
+  'Pottery & Terracotta',
+  'Handloom & Silk',
+  'Bell Metal Casting',
+  'Woodcraft & Lacquer',
+  'Bamboo & Cane',
+  'Leather Craft',
+  'Folk Art & Painting',
+  'Stone Carving',
+  'Jewellery & Gemstones'
+];
+
 export default function ArtisanCatalogue({
   products = [],
   onAddProduct,
@@ -48,6 +60,22 @@ export default function ArtisanCatalogue({
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL'); // 'ALL' | 'ONDC_LIVE' | 'DRAFT'
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'table'
+
+  // Custom "Other" Category Input States
+  const [isOtherCategoryNew, setIsOtherCategoryNew] = useState(false);
+  const [customCategoryNewText, setCustomCategoryNewText] = useState('');
+  const [isOtherCategoryEdit, setIsOtherCategoryEdit] = useState(false);
+  const [customCategoryEditText, setCustomCategoryEditText] = useState('');
+
+  // Pricing Decision Method States: 'ai' (AI Decides) | 'manual' (Artisan Sets)
+  const [addPricingMode, setAddPricingMode] = useState('ai');
+  const [editPricingMode, setEditPricingMode] = useState('ai');
+
+  const calculateAIBenchmark = (raw, hours) => {
+    const r = Number(raw) || 160;
+    const h = Number(hours) || 8;
+    return Math.round((r + h * 145) * 1.25);
+  };
 
   // Add Product Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -178,7 +206,19 @@ export default function ArtisanCatalogue({
   };
 
   // Categories for filtering
-  const categories = ['ALL', 'Pottery & Terracotta', 'Handloom & Silk', 'Bell Metal Casting', 'Woodcraft & Lacquer'];
+  const categories = ['ALL', ...Array.from(new Set([
+    ...STANDARD_CRAFT_CATEGORIES,
+    ...products.map(p => p.category).filter(Boolean)
+  ]))];
+
+  // Helper to open Edit Modal and prefill custom category state if needed
+  const handleOpenEditModal = (product) => {
+    setProductToEdit({ ...product });
+    const isCustom = product.category && !STANDARD_CRAFT_CATEGORIES.includes(product.category);
+    setIsOtherCategoryEdit(Boolean(isCustom));
+    setCustomCategoryEditText(isCustom ? product.category : '');
+    setEditPricingMode(product.pricingMode || 'ai');
+  };
 
   // Filter products
   const filteredProducts = products.filter(prod => {
@@ -221,26 +261,27 @@ export default function ArtisanCatalogue({
   // Submit Add Product Form
   const handleFormSubmit = (e) => {
     e.preventDefault();
-    if (!newProductForm.title) {
-      alert('Please provide a product title');
-      return;
-    }
+    const finalCategory = (isOtherCategoryNew && customCategoryNewText.trim())
+      ? customCategoryNewText.trim()
+      : (newProductForm.category === 'Other' ? 'Custom Handicraft' : newProductForm.category || 'Handicraft');
 
-    const calculatedPrice = Number(newProductForm.price) ||
-      (Number(newProductForm.rawCost || 150) + Number(newProductForm.laborHours || 8) * 140 * 1.25);
+    const effectivePrice = addPricingMode === 'ai'
+      ? calculateAIBenchmark(newProductForm.rawCost, newProductForm.laborHours)
+      : (Number(newProductForm.price) || calculateAIBenchmark(newProductForm.rawCost, newProductForm.laborHours));
 
     const newProd = {
-      id: 'prod-' + Date.now(),
-      sku: `ART-${(newProductForm.category.split(' ')[0] || 'CRAFT').toUpperCase().slice(0, 4)}-${Math.floor(100 + Math.random() * 900)}`,
-      title: newProductForm.title,
-      category: newProductForm.category,
-      craftStyle: newProductForm.craftStyle || 'Artisan Handcrafted',
-      material: newProductForm.material || 'Authentic Regional Materials',
-      dimensions: newProductForm.dimensions || '25cm x 15cm x 10cm',
-      weight: newProductForm.weight || '650g',
+      id: `prod-${Date.now()}`,
+      sku: `ART-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+      title: newProductForm.title || 'Untitled Masterpiece',
+      category: finalCategory,
+      craftStyle: newProductForm.craftStyle || 'Traditional',
+      material: newProductForm.material || 'Local Eco-friendly Material',
+      dimensions: newProductForm.dimensions || 'Custom Size',
+      weight: newProductForm.weight || '0.5 kg',
       rawCost: Number(newProductForm.rawCost) || 160,
       laborHours: Number(newProductForm.laborHours) || 8,
-      price: Math.round(calculatedPrice),
+      price: effectivePrice,
+      pricingMode: addPricingMode,
       ondcPublished: Boolean(newProductForm.ondcPublished),
       giCertified: Boolean(newProductForm.giCertified),
       trustBadge: 'Artisan Verified (PM Vishwakarma)',
@@ -252,6 +293,8 @@ export default function ArtisanCatalogue({
       onAddProduct(newProd);
     }
     setIsAddModalOpen(false);
+    setIsOtherCategoryNew(false);
+    setCustomCategoryNewText('');
     setNewProductForm({
       title: '',
       category: 'Pottery & Terracotta',
@@ -287,7 +330,7 @@ export default function ArtisanCatalogue({
   // One-click apply AI pricing suggestion in edit modal
   const handleApplySuggestedPriceInEdit = () => {
     if (!productToEdit) return;
-    const suggested = getSuggestedPrice(productToEdit);
+    const suggested = calculateAIBenchmark(productToEdit.rawCost, productToEdit.laborHours);
     setProductToEdit(prev => ({
       ...prev,
       price: suggested
@@ -300,9 +343,20 @@ export default function ArtisanCatalogue({
     e.preventDefault();
     if (!productToEdit) return;
 
+    const finalCategory = (isOtherCategoryEdit && customCategoryEditText.trim())
+      ? customCategoryEditText.trim()
+      : (productToEdit.category === 'Other' ? 'Custom Handicraft' : productToEdit.category || 'Handicraft');
+
+    const aiBenchmark = calculateAIBenchmark(productToEdit.rawCost, productToEdit.laborHours);
+    const finalPrice = editPricingMode === 'ai'
+      ? aiBenchmark
+      : (Number(productToEdit.price) || aiBenchmark);
+
     const updated = {
       ...productToEdit,
-      price: Number(productToEdit.price) || getSuggestedPrice(productToEdit),
+      category: finalCategory,
+      pricingMode: editPricingMode,
+      price: finalPrice,
       rawCost: Number(productToEdit.rawCost) || 0,
       laborHours: Number(productToEdit.laborHours) || 0
     };
@@ -311,6 +365,8 @@ export default function ArtisanCatalogue({
       onEditProduct(updated);
     }
     showToast(`✏️ "${updated.title}" updated successfully!`);
+    setIsOtherCategoryEdit(false);
+    setCustomCategoryEditText('');
     setProductToEdit(null);
   };
 
@@ -670,7 +726,7 @@ export default function ArtisanCatalogue({
 
                 <div className="flex items-center gap-1.5">
                   <button
-                    onClick={() => setProductToEdit({ ...product })}
+                    onClick={() => handleOpenEditModal(product)}
                     className="text-amber-400 hover:text-amber-300 hover:bg-amber-500/15 px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 text-[11px] border border-amber-500/30 font-semibold"
                     title="Edit product details & pricing"
                   >
@@ -770,7 +826,7 @@ export default function ArtisanCatalogue({
                   <td className="p-3 text-right">
                     <div className="flex items-center justify-end gap-1.5">
                       <button
-                        onClick={() => setProductToEdit({ ...product })}
+                        onClick={() => handleOpenEditModal(product)}
                         className="p-1.5 text-amber-400 hover:text-amber-300 hover:bg-amber-500/20 rounded-lg transition-all"
                         title="Edit product details & pricing"
                       >
@@ -889,21 +945,51 @@ export default function ArtisanCatalogue({
                 </div>
 
                 <div>
-                  <label className="block text-gray-300 font-medium mb-1">
-                    Craft Category
+                  <label className="block text-gray-300 font-medium mb-1 flex items-center justify-between">
+                    <span>Craft Category</span>
+                    {isOtherCategoryNew && (
+                      <span className="text-[10px] text-amber-400 font-mono">Custom Input</span>
+                    )}
                   </label>
                   <select
-                    value={newProductForm.category}
-                    onChange={(e) => setNewProductForm({ ...newProductForm, category: e.target.value })}
+                    value={isOtherCategoryNew ? 'Other' : newProductForm.category}
+                    onChange={(e) => {
+                      if (e.target.value === 'Other') {
+                        setIsOtherCategoryNew(true);
+                        setNewProductForm(prev => ({ ...prev, category: customCategoryNewText || 'Other' }));
+                      } else {
+                        setIsOtherCategoryNew(false);
+                        setNewProductForm(prev => ({ ...prev, category: e.target.value }));
+                      }
+                    }}
                     className="w-full bg-black/40 border border-white/15 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-[var(--color-saffron)]"
                   >
-                    <option value="Pottery & Terracotta">Pottery & Terracotta</option>
-                    <option value="Handloom & Silk">Handloom & Silk</option>
-                    <option value="Bell Metal Casting">Bell Metal Casting</option>
-                    <option value="Woodcraft & Lacquer">Woodcraft & Lacquer</option>
-                    <option value="Bamboo & Cane">Bamboo & Cane</option>
-                    <option value="Leather Craft">Leather Craft</option>
+                    {STANDARD_CRAFT_CATEGORIES.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                    <option value="Other">✨ Other (Input your own category...)</option>
                   </select>
+
+                  {/* Custom Category Input Field when 'Other' is selected */}
+                  {isOtherCategoryNew && (
+                    <div className="mt-2 animate-fade-in">
+                      <label className="block text-xs font-semibold text-[var(--color-saffron)] mb-1">
+                        Type Custom Craft Category *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Zari Embroidery, Tanjore Painting, Stone Carving..."
+                        value={customCategoryNewText}
+                        onChange={(e) => {
+                          setCustomCategoryNewText(e.target.value);
+                          setNewProductForm(prev => ({ ...prev, category: e.target.value }));
+                        }}
+                        className="w-full bg-black/60 border border-[var(--color-saffron)] rounded-xl px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[var(--color-saffron)] shadow-inner text-xs"
+                        autoFocus
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -945,43 +1031,133 @@ export default function ArtisanCatalogue({
                 </div>
               </div>
 
-              {/* Cost & Price Calculation */}
-              <div className="grid grid-cols-3 gap-3 p-3 rounded-xl bg-black/30 border border-white/10">
-                <div>
-                  <label className="block text-gray-400 text-[11px] mb-1">
-                    Raw Cost (₹)
+              {/* Pricing Decision Method: AI Decides vs Set Myself */}
+              <div className="p-3.5 rounded-xl bg-black/40 border border-white/10 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <label className="text-xs font-semibold text-gray-200 flex items-center gap-1.5">
+                    <IndianRupee className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Pricing Decision Method</span>
                   </label>
-                  <input
-                    type="number"
-                    placeholder="160"
-                    value={newProductForm.rawCost}
-                    onChange={(e) => setNewProductForm({ ...newProductForm, rawCost: e.target.value })}
-                    className="w-full bg-black/40 border border-white/15 rounded-lg px-2.5 py-1.5 text-white"
-                  />
+                  <div className="flex items-center gap-1.5 p-0.5 rounded-lg bg-black/50 border border-white/10 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAddPricingMode('ai');
+                        const aiP = calculateAIBenchmark(newProductForm.rawCost, newProductForm.laborHours);
+                        setNewProductForm(prev => ({ ...prev, price: aiP }));
+                      }}
+                      className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1 ${
+                        addPricingMode === 'ai'
+                          ? 'bg-amber-500 text-black font-bold shadow-sm'
+                          : 'text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      <span>Let AI Decide Price</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAddPricingMode('manual')}
+                      className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1 ${
+                        addPricingMode === 'manual'
+                          ? 'bg-white/20 text-white font-bold shadow-sm'
+                          : 'text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      <IndianRupee className="w-3 h-3" />
+                      <span>Set Price Myself</span>
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-gray-400 text-[11px] mb-1">
-                    Labor Hours
-                  </label>
-                  <input
-                    type="number"
-                    placeholder="8"
-                    value={newProductForm.laborHours}
-                    onChange={(e) => setNewProductForm({ ...newProductForm, laborHours: e.target.value })}
-                    className="w-full bg-black/40 border border-white/15 rounded-lg px-2.5 py-1.5 text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-gray-400 text-[11px] mb-1 font-semibold text-emerald-400">
-                    Selling Price (₹)
-                  </label>
-                  <input
-                    type="number"
-                    placeholder="1850"
-                    value={newProductForm.price}
-                    onChange={(e) => setNewProductForm({ ...newProductForm, price: e.target.value })}
-                    className="w-full bg-black/40 border border-emerald-500/40 rounded-lg px-2.5 py-1.5 text-emerald-300 font-bold"
-                  />
+
+                {addPricingMode === 'ai' ? (
+                  <div className="p-2.5 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-between gap-2 text-xs">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-amber-400" />
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-amber-300 block">
+                          AI Fair Living Wage Auto-Benchmark
+                        </span>
+                        <span className="text-sm font-extrabold text-white font-mono">
+                          ₹{calculateAIBenchmark(newProductForm.rawCost, newProductForm.laborHours).toLocaleString('en-IN')}
+                        </span>
+                        <span className="text-[10px] text-gray-400 ml-1.5">
+                          (₹{newProductForm.rawCost || 160} raw + {newProductForm.laborHours || 8}h @ ₹145/hr + 25% margin)
+                        </span>
+                      </div>
+                    </div>
+                    <span className="text-[10px] text-emerald-300 font-semibold px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-500/40">
+                      Auto-Calculated
+                    </span>
+                  </div>
+                ) : (
+                  <div className="p-2.5 rounded-lg bg-black/60 border border-emerald-500/30 text-xs">
+                    <span className="text-emerald-300 font-semibold block mb-1">
+                      Artisan Custom Price Mode Active:
+                    </span>
+                    <span className="text-[10px] text-gray-400">
+                      Input your own selling price below. AI Living Wage Benchmark is ₹{calculateAIBenchmark(newProductForm.rawCost, newProductForm.laborHours).toLocaleString('en-IN')}.
+                    </span>
+                  </div>
+                )}
+
+                {/* Cost Inputs & Final Price */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-gray-400 text-[11px] mb-1">
+                      Raw Cost (₹)
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="160"
+                      value={newProductForm.rawCost}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        setNewProductForm(prev => ({
+                          ...prev,
+                          rawCost: raw,
+                          price: addPricingMode === 'ai' ? calculateAIBenchmark(raw, prev.laborHours) : prev.price
+                        }));
+                      }}
+                      className="w-full bg-black/40 border border-white/15 rounded-lg px-2.5 py-1.5 text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-400 text-[11px] mb-1">
+                      Labor Hours
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="8"
+                      value={newProductForm.laborHours}
+                      onChange={(e) => {
+                        const hrs = e.target.value;
+                        setNewProductForm(prev => ({
+                          ...prev,
+                          laborHours: hrs,
+                          price: addPricingMode === 'ai' ? calculateAIBenchmark(prev.rawCost, hrs) : prev.price
+                        }));
+                      }}
+                      className="w-full bg-black/40 border border-white/15 rounded-lg px-2.5 py-1.5 text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-400 text-[11px] mb-1 font-semibold text-emerald-400">
+                      {addPricingMode === 'ai' ? 'AI Decided Price (₹)' : 'Custom Price (₹)'}
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="1850"
+                      readOnly={addPricingMode === 'ai'}
+                      value={addPricingMode === 'ai' ? calculateAIBenchmark(newProductForm.rawCost, newProductForm.laborHours) : newProductForm.price}
+                      onChange={(e) => setNewProductForm({ ...newProductForm, price: e.target.value })}
+                      className={`w-full border rounded-lg px-2.5 py-1.5 font-bold ${
+                        addPricingMode === 'ai'
+                          ? 'bg-amber-950/40 border-amber-500/40 text-amber-300 font-mono cursor-not-allowed'
+                          : 'bg-black/40 border-emerald-500/50 text-emerald-300'
+                      }`}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -1178,21 +1354,51 @@ export default function ArtisanCatalogue({
                 </div>
 
                 <div>
-                  <label className="block text-gray-300 font-medium mb-1">
-                    Craft Category
+                  <label className="block text-gray-300 font-medium mb-1 flex items-center justify-between">
+                    <span>Craft Category</span>
+                    {isOtherCategoryEdit && (
+                      <span className="text-[10px] text-amber-400 font-mono">Custom Input</span>
+                    )}
                   </label>
                   <select
-                    value={productToEdit.category}
-                    onChange={(e) => setProductToEdit({ ...productToEdit, category: e.target.value })}
+                    value={isOtherCategoryEdit ? 'Other' : (STANDARD_CRAFT_CATEGORIES.includes(productToEdit.category) ? productToEdit.category : 'Other')}
+                    onChange={(e) => {
+                      if (e.target.value === 'Other') {
+                        setIsOtherCategoryEdit(true);
+                        setProductToEdit(prev => ({ ...prev, category: customCategoryEditText || 'Other' }));
+                      } else {
+                        setIsOtherCategoryEdit(false);
+                        setProductToEdit(prev => ({ ...prev, category: e.target.value }));
+                      }
+                    }}
                     className="w-full bg-black/40 border border-white/15 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-[var(--color-saffron)]"
                   >
-                    <option value="Pottery & Terracotta">Pottery & Terracotta</option>
-                    <option value="Handloom & Silk">Handloom & Silk</option>
-                    <option value="Bell Metal Casting">Bell Metal Casting</option>
-                    <option value="Woodcraft & Lacquer">Woodcraft & Lacquer</option>
-                    <option value="Bamboo & Cane">Bamboo & Cane</option>
-                    <option value="Leather Craft">Leather Craft</option>
+                    {STANDARD_CRAFT_CATEGORIES.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                    <option value="Other">✨ Other (Input your own category...)</option>
                   </select>
+
+                  {/* Custom Category Input Field when 'Other' is selected */}
+                  {isOtherCategoryEdit && (
+                    <div className="mt-2 animate-fade-in">
+                      <label className="block text-xs font-semibold text-[var(--color-saffron)] mb-1">
+                        Type Custom Craft Category *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Zari Embroidery, Tanjore Painting, Stone Carving..."
+                        value={customCategoryEditText}
+                        onChange={(e) => {
+                          setCustomCategoryEditText(e.target.value);
+                          setProductToEdit(prev => ({ ...prev, category: e.target.value }));
+                        }}
+                        className="w-full bg-black/60 border border-[var(--color-saffron)] rounded-xl px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[var(--color-saffron)] shadow-inner text-xs"
+                        autoFocus
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1231,37 +1437,78 @@ export default function ArtisanCatalogue({
                 </div>
               </div>
 
-              {/* Pricing Suggestion & Cost Inputs */}
+              {/* Pricing Decision Method & Cost Inputs */}
               <div className="p-3.5 rounded-xl bg-black/40 border border-white/10 space-y-3">
-                
-                {/* AI Pricing Suggestion Banner */}
-                <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-lg bg-amber-500/15 border border-amber-500/30">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-[var(--color-saffron)]" />
-                    <div>
-                      <span className="text-[10px] uppercase font-bold text-amber-300 block">
-                        AI Pricing Suggestion
-                      </span>
-                      <span className="text-sm font-extrabold text-white font-mono">
-                        ₹{getSuggestedPrice(productToEdit).toLocaleString('en-IN')}
-                      </span>
-                      <span className="text-[10px] text-gray-400 ml-1.5">
-                        (Raw ₹{productToEdit.rawCost || 0} + {productToEdit.laborHours || 0}h @ ₹145/hr + 25%)
-                      </span>
-                    </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-gray-200">
+                    Pricing Decision Method:
+                  </span>
+                  <div className="flex bg-black/60 p-0.5 rounded-lg border border-white/10 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditPricingMode('ai');
+                        setProductToEdit(prev => ({
+                          ...prev,
+                          price: calculateAIBenchmark(prev.rawCost, prev.laborHours)
+                        }));
+                      }}
+                      className={`px-3 py-1 rounded-md transition-all flex items-center gap-1.5 ${
+                        editPricingMode === 'ai'
+                          ? 'bg-amber-500 text-black font-bold shadow-sm'
+                          : 'text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      <span>Let AI Decide Price</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditPricingMode('manual')}
+                      className={`px-3 py-1 rounded-md transition-all flex items-center gap-1.5 ${
+                        editPricingMode === 'manual'
+                          ? 'bg-white/20 text-white font-bold shadow-sm'
+                          : 'text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      <IndianRupee className="w-3 h-3" />
+                      <span>Set Price Myself</span>
+                    </button>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={handleApplySuggestedPriceInEdit}
-                    className="btn-primary px-3 py-1 text-[11px] font-semibold flex items-center gap-1 shadow-sm"
-                  >
-                    <Sparkles className="w-3 h-3" />
-                    <span>Apply Suggestion</span>
-                  </button>
                 </div>
 
-                {/* Cost Inputs */}
+                {editPricingMode === 'ai' ? (
+                  <div className="p-2.5 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-between gap-2 text-xs">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-amber-400" />
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-amber-300 block">
+                          AI Fair Living Wage Auto-Benchmark
+                        </span>
+                        <span className="text-sm font-extrabold text-white font-mono">
+                          ₹{calculateAIBenchmark(productToEdit.rawCost, productToEdit.laborHours).toLocaleString('en-IN')}
+                        </span>
+                        <span className="text-[10px] text-gray-400 ml-1.5">
+                          (₹{productToEdit.rawCost || 0} raw + {productToEdit.laborHours || 0}h @ ₹145/hr + 25% margin)
+                        </span>
+                      </div>
+                    </div>
+                    <span className="text-[10px] text-emerald-300 font-semibold px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-500/40">
+                      Auto-Calculated
+                    </span>
+                  </div>
+                ) : (
+                  <div className="p-2.5 rounded-lg bg-black/60 border border-emerald-500/30 text-xs">
+                    <span className="text-emerald-300 font-semibold block mb-1">
+                      Artisan Custom Price Mode Active:
+                    </span>
+                    <span className="text-[10px] text-gray-400">
+                      Input your own selling price below. AI Living Wage Benchmark is ₹{calculateAIBenchmark(productToEdit.rawCost, productToEdit.laborHours).toLocaleString('en-IN')}.
+                    </span>
+                  </div>
+                )}
+
+                {/* Cost Inputs & Price */}
                 <div className="grid grid-cols-3 gap-3">
                   <div>
                     <label className="block text-gray-400 text-[11px] mb-1">
@@ -1270,7 +1517,14 @@ export default function ArtisanCatalogue({
                     <input
                       type="number"
                       value={productToEdit.rawCost || ''}
-                      onChange={(e) => setProductToEdit({ ...productToEdit, rawCost: e.target.value })}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        setProductToEdit(prev => ({
+                          ...prev,
+                          rawCost: raw,
+                          price: editPricingMode === 'ai' ? calculateAIBenchmark(raw, prev.laborHours) : prev.price
+                        }));
+                      }}
                       className="w-full bg-black/60 border border-white/15 rounded-lg px-2.5 py-1.5 text-white"
                     />
                   </div>
@@ -1281,19 +1535,31 @@ export default function ArtisanCatalogue({
                     <input
                       type="number"
                       value={productToEdit.laborHours || ''}
-                      onChange={(e) => setProductToEdit({ ...productToEdit, laborHours: e.target.value })}
+                      onChange={(e) => {
+                        const hrs = e.target.value;
+                        setProductToEdit(prev => ({
+                          ...prev,
+                          laborHours: hrs,
+                          price: editPricingMode === 'ai' ? calculateAIBenchmark(prev.rawCost, hrs) : prev.price
+                        }));
+                      }}
                       className="w-full bg-black/60 border border-white/15 rounded-lg px-2.5 py-1.5 text-white"
                     />
                   </div>
                   <div>
                     <label className="block text-gray-400 text-[11px] mb-1 font-semibold text-emerald-400">
-                      Listed Price (₹)
+                      {editPricingMode === 'ai' ? 'AI Decided Price (₹)' : 'Custom Price (₹)'}
                     </label>
                     <input
                       type="number"
-                      value={productToEdit.price || ''}
+                      readOnly={editPricingMode === 'ai'}
+                      value={editPricingMode === 'ai' ? calculateAIBenchmark(productToEdit.rawCost, productToEdit.laborHours) : (productToEdit.price || '')}
                       onChange={(e) => setProductToEdit({ ...productToEdit, price: e.target.value })}
-                      className="w-full bg-black/60 border border-emerald-500/40 rounded-lg px-2.5 py-1.5 text-emerald-300 font-bold"
+                      className={`w-full border rounded-lg px-2.5 py-1.5 font-bold ${
+                        editPricingMode === 'ai'
+                          ? 'bg-amber-950/40 border-amber-500/40 text-amber-300 font-mono cursor-not-allowed'
+                          : 'bg-black/60 border-emerald-500/40 text-emerald-300'
+                      }`}
                     />
                   </div>
                 </div>
