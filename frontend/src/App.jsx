@@ -16,7 +16,8 @@ import {
   saveProductToDatabase,
   updateProductInDatabase,
   deleteProductFromDatabase,
-  toggleProductOndcInDatabase
+  toggleProductOndcInDatabase,
+  syncEdgeSqliteToMainDatabase
 } from './services/apiService';
 
 export default function App() {
@@ -24,6 +25,12 @@ export default function App() {
   const [isOnline, setIsOnline] = useState(true);
   const [activeStep, setActiveStep] = useState(1);
   const [isMobileSimView, setIsMobileSimView] = useState(false);
+  const [syncToast, setSyncToast] = useState(null);
+
+  const triggerSyncToast = (msg) => {
+    setSyncToast(msg);
+    setTimeout(() => setSyncToast(null), 5000);
+  };
 
   // Theme state with localStorage persistence
   const [theme, setTheme] = useState(() => {
@@ -102,6 +109,52 @@ export default function App() {
     });
   }, []);
 
+  // Automatic SQLite flush & upload when network is detected
+  useEffect(() => {
+    const handleNetworkOnline = async () => {
+      setIsOnline(true);
+      triggerSyncToast('⚡ Network connection detected: Flushed pending Edge SQLite records to Main Database...');
+      try {
+        const syncRes = await syncEdgeSqliteToMainDatabase();
+        if (syncRes && syncRes.count > 0) {
+          triggerSyncToast(`✅ Network online! ${syncRes.count} product(s) uploaded from Edge SQLite to Main Database.`);
+          const { data } = await fetchProducts();
+          if (data && data.length > 0) {
+            setCatalogueProducts(data);
+          }
+        }
+      } catch (err) {
+        console.warn('Auto-sync on network restore failed:', err);
+      }
+    };
+
+    const handleNetworkOffline = () => {
+      setIsOnline(false);
+      triggerSyncToast('📡 Working Offline: Edge SQLite mode active. New products will be stored safely on-device.');
+    };
+
+    const handleEdgeSqliteSyncedEvent = async (e) => {
+      const count = e.detail?.syncedCount;
+      if (count > 0) {
+        triggerSyncToast(`✅ Successfully synced ${count} craft(s) from Edge SQLite to Main Database!`);
+        const { data } = await fetchProducts();
+        if (data && data.length > 0) {
+          setCatalogueProducts(data);
+        }
+      }
+    };
+
+    window.addEventListener('online', handleNetworkOnline);
+    window.addEventListener('offline', handleNetworkOffline);
+    window.addEventListener('edge_sqlite_synced', handleEdgeSqliteSyncedEvent);
+
+    return () => {
+      window.removeEventListener('online', handleNetworkOnline);
+      window.removeEventListener('offline', handleNetworkOffline);
+      window.removeEventListener('edge_sqlite_synced', handleEdgeSqliteSyncedEvent);
+    };
+  }, []);
+
   useEffect(() => {
     try {
       localStorage.setItem('artisan_catalogue_v1', JSON.stringify(catalogueProducts));
@@ -110,17 +163,52 @@ export default function App() {
     }
   }, [catalogueProducts]);
 
-  const handleAddProduct = async (newProd) => {
-    // 1. Optimistic UI update
-    setCatalogueProducts(prev => [newProd, ...prev]);
+  const handleToggleOnline = async () => {
+    const nextOnline = !isOnline;
+    setIsOnline(nextOnline);
+    if (nextOnline) {
+      triggerSyncToast('⚡ Connected to network: Auto-uploading Edge SQLite queue to Main Database...');
+      try {
+        const syncRes = await syncEdgeSqliteToMainDatabase();
+        if (syncRes && syncRes.count > 0) {
+          triggerSyncToast(`✅ Uploaded ${syncRes.count} pending product(s) from Edge SQLite to Main Database!`);
+          const { data } = await fetchProducts();
+          if (data && data.length > 0) {
+            setCatalogueProducts(data);
+          }
+        } else {
+          triggerSyncToast('☁️ Cloud connected: Main Database synchronized.');
+        }
+      } catch (err) {
+        console.warn('Online sync toggle failed:', err);
+      }
+    } else {
+      triggerSyncToast('📦 Offline Mode Enabled: New listings will be saved to local Edge SQLite database.');
+    }
+  };
 
-    // 2. Persist directly to backend database
-    const res = await saveProductToDatabase(newProd);
+  const handleAddProduct = async (newProd) => {
+    // 1. Optimistic UI update with proper sync status flags
+    const optimisticProd = {
+      ...newProd,
+      syncedWithDb: isOnline,
+      offlineQueued: !isOnline,
+      syncStatus: isOnline ? 'Live on Main Database' : 'Queued in SQLite (Offline)'
+    };
+    setCatalogueProducts(prev => [optimisticProd, ...prev]);
+
+    // 2. Persist directly to backend database or local Edge SQLite
+    const res = await saveProductToDatabase(newProd, isOnline);
     if (res?.product?.id) {
-      // Reconcile with actual database record and ID
       setCatalogueProducts(prev =>
         prev.map(p => (p.id === newProd.id ? { ...p, ...res.product } : p))
       );
+    }
+
+    if (!isOnline) {
+      triggerSyncToast(`💾 Stored in Edge SQLite: "${newProd.title}" will upload to Main Database when network connects.`);
+    } else {
+      triggerSyncToast(`☁️ Uploaded to Main Database: "${newProd.title}" is live!`);
     }
   };
 
@@ -168,7 +256,10 @@ export default function App() {
       giCertified: true,
       trustBadge: scannedCraft.trustBadge || 'Masterpiece Grade A+ (GI Certified)',
       image: scannedCraft.image,
-      dateAdded: new Date().toISOString().split('T')[0]
+      dateAdded: new Date().toISOString().split('T')[0],
+      syncedWithDb: isOnline,
+      offlineQueued: !isOnline,
+      syncStatus: isOnline ? 'Live on Main Database' : 'Queued in SQLite (Offline)'
     };
 
     setCatalogueProducts(prev => {
@@ -179,15 +270,31 @@ export default function App() {
           ...updated[existingIdx],
           ondcPublished: true,
           price: pricing.fairMarketPrice || updated[existingIdx].price,
-          image: scannedCraft.image || updated[existingIdx].image
+          image: scannedCraft.image || updated[existingIdx].image,
+          syncedWithDb: isOnline,
+          offlineQueued: !isOnline,
+          syncStatus: isOnline ? 'Live on Main Database' : 'Queued in SQLite (Offline)'
         };
-        updateProductInDatabase(updated[existingIdx].id, updated[existingIdx]);
+        if (isOnline) {
+          updateProductInDatabase(updated[existingIdx].id, updated[existingIdx]);
+        }
         return updated;
       }
       return [newEntry, ...prev];
     });
 
-    saveProductToDatabase(newEntry);
+    const res = await saveProductToDatabase(newEntry, isOnline);
+    if (res?.product) {
+      setCatalogueProducts(prev =>
+        prev.map(p => (p.id === newEntry.id ? { ...p, ...res.product } : p))
+      );
+    }
+
+    if (!isOnline) {
+      triggerSyncToast(`💾 Published to Edge SQLite: Ready for auto-upload upon network detection.`);
+    } else {
+      triggerSyncToast(`🚀 Published to Main Database & ONDC network successfully!`);
+    }
   };
 
   const handleListingPhotosApplied = (primaryImageUrl, allPhotos) => {
@@ -268,10 +375,18 @@ export default function App() {
         selectedLang={language}
         onSelectLang={setLanguage}
         isOnline={isOnline}
-        onToggleOnline={() => setIsOnline(!isOnline)}
+        onToggleOnline={handleToggleOnline}
         theme={theme}
         onToggleTheme={toggleTheme}
       />
+
+      {/* Network Sync Floating Toast Banner */}
+      {syncToast && (
+        <div className="fixed top-20 right-6 z-50 max-w-md bg-slate-900/95 border border-amber-500/60 shadow-2xl rounded-2xl p-3.5 text-xs text-amber-200 backdrop-blur-md flex items-center gap-3 animate-fadeIn">
+          <div className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping shrink-0" />
+          <p className="font-semibold leading-relaxed">{syncToast}</p>
+        </div>
+      )}
 
       <main className="max-w-6xl mx-auto px-4 w-full flex-grow">
         
@@ -296,9 +411,9 @@ export default function App() {
             {/* Studio vs Catalogue Switcher */}
             <div className="flex items-center glass-pill p-1">
               <button
-                onClick={() => { if (activeStep === 5) setActiveStep(1); }}
+                onClick={() => { if (activeStep === 4) setActiveStep(1); }}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                  activeStep !== 5
+                  activeStep !== 4
                     ? 'bg-[var(--color-terracotta)] text-white shadow-md'
                     : 'text-gray-400 hover:text-white'
                 }`}
@@ -307,9 +422,9 @@ export default function App() {
                 <span>{t('steps.step2', 'AI Listing Studio')}</span>
               </button>
               <button
-                onClick={() => setActiveStep(5)}
+                onClick={() => setActiveStep(4)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                  activeStep === 5
+                  activeStep === 4
                     ? 'bg-amber-500 text-black shadow-md'
                     : 'text-gray-400 hover:text-white'
                 }`}
@@ -443,6 +558,7 @@ export default function App() {
               {activeStep === 4 && (
                 <div className="space-y-4">
                   <ArtisanCatalogue
+                    isOnline={isOnline}
                     products={catalogueProducts}
                     onAddProduct={handleAddProduct}
                     onRemoveProduct={handleRemoveProduct}
@@ -559,6 +675,7 @@ export default function App() {
             {activeStep === 4 && (
               <div className="space-y-6">
                 <ArtisanCatalogue
+                  isOnline={isOnline}
                   products={catalogueProducts}
                   onAddProduct={handleAddProduct}
                   onRemoveProduct={handleRemoveProduct}
