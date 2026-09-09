@@ -185,7 +185,20 @@ export default function App() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col justify-between pb-10">
+    <div className="min-h-screen flex flex-col justify-between pb-10 relative">
+
+      {/* 3D Ambient Floating Depth Orbs */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden -z-10" aria-hidden="true">
+        <div className="absolute top-[6%] left-[4%] w-96 h-96 rounded-full bg-gradient-to-tr from-amber-500/15 via-rose-600/10 to-transparent blur-3xl animate-float-3d" />
+        <div className="absolute top-[38%] right-[2%] w-[26rem] h-[26rem] rounded-full bg-gradient-to-bl from-purple-600/12 via-indigo-600/10 to-transparent blur-3xl animate-float-3d" style={{ animationDelay: '-2.5s' }} />
+        <div className="absolute bottom-[12%] left-[25%] w-80 h-80 rounded-full bg-gradient-to-tr from-amber-600/10 to-transparent blur-3xl animate-float-3d" style={{ animationDelay: '-1.2s' }} />
+      </div>
+
+      {/* 3D Wireframe Geometric Background Shapes */}
+      <div className="bg-3d-cube" aria-hidden="true" />
+      <div className="bg-3d-ring" aria-hidden="true" />
+      <div className="bg-3d-diamond" aria-hidden="true" />
+      <div className="bg-3d-hex" aria-hidden="true" />
 
       {/* Navigation Header */}
       <Navbar

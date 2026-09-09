@@ -378,3 +378,285 @@ input[type="range"] {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.25);
 }
+
+/* ==========================================================================
+   3D Animated Background Effects
+   ========================================================================== */
+
+/* ── Subtle dot grid overlay ── */
+.min-h-screen::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -5;
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 30px 30px;
+  pointer-events: none;
+}
+
+[data-theme="light"] .min-h-screen::before,
+.light .min-h-screen::before {
+  background-image: radial-gradient(circle, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+}
+
+/* ── Slow rotating aurora conic glow ── */
+.min-h-screen::after {
+  content: '';
+  position: fixed;
+  top: -30%;
+  left: -30%;
+  width: 160%;
+  height: 160%;
+  z-index: -6;
+  background:
+    conic-gradient(from 0deg at 50% 50%,
+      rgba(234, 88, 12, 0.07) 0deg,
+      rgba(147, 51, 234, 0.05) 60deg,
+      rgba(16, 185, 129, 0.04) 120deg,
+      rgba(245, 158, 11, 0.07) 180deg,
+      rgba(99, 102, 241, 0.05) 240deg,
+      rgba(251, 191, 36, 0.06) 300deg,
+      rgba(234, 88, 12, 0.07) 360deg
+    );
+  filter: blur(90px);
+  animation: aurora-spin 30s linear infinite;
+  pointer-events: none;
+}
+
+[data-theme="light"] .min-h-screen::after,
+.light .min-h-screen::after {
+  background:
+    conic-gradient(from 0deg at 50% 50%,
+      rgba(194, 65, 12, 0.04) 0deg,
+      rgba(126, 34, 206, 0.03) 60deg,
+      rgba(5, 150, 105, 0.02) 120deg,
+      rgba(217, 119, 6, 0.04) 180deg,
+      rgba(79, 70, 229, 0.03) 240deg,
+      rgba(180, 83, 9, 0.03) 300deg,
+      rgba(194, 65, 12, 0.04) 360deg
+    );
+}
+
+@keyframes aurora-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ── Floating particles (box-shadow — zero DOM) ── */
+body::before {
+  content: '';
+  position: fixed;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  z-index: -3;
+  pointer-events: none;
+  box-shadow:
+    10vw 88vh 0 0   rgba(245, 158, 11, 0.30),
+    22vw 92vh 0 1px  rgba(234, 88, 12, 0.25),
+    38vw 85vh 0 0    rgba(251, 191, 36, 0.28),
+    55vw 90vh 0 1px  rgba(147, 51, 234, 0.22),
+    70vw 87vh 0 0    rgba(99, 102, 241, 0.24),
+    85vw 93vh 0 1px  rgba(245, 158, 11, 0.26),
+    15vw 72vh 0 0    rgba(16, 185, 129, 0.20),
+    45vw 78vh 0 1px  rgba(234, 88, 12, 0.18),
+    68vw 74vh 0 0    rgba(147, 51, 234, 0.18),
+    90vw 70vh 0 1px  rgba(251, 191, 36, 0.20);
+  animation: particles-rise-1 14s ease-in-out infinite;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  z-index: -3;
+  pointer-events: none;
+  box-shadow:
+    18vw 95vh 0 1px  rgba(234, 88, 12, 0.24),
+    30vw 80vh 0 0    rgba(16, 185, 129, 0.20),
+    50vw 97vh 0 1px  rgba(245, 158, 11, 0.28),
+    62vw 83vh 0 0    rgba(99, 102, 241, 0.22),
+    78vw 94vh 0 1px  rgba(147, 51, 234, 0.24),
+    8vw  76vh 0 0    rgba(251, 191, 36, 0.18),
+    42vw 68vh 0 1px  rgba(234, 88, 12, 0.16),
+    75vw 65vh 0 0    rgba(245, 158, 11, 0.18),
+    28vw 62vh 0 1px  rgba(16, 185, 129, 0.16),
+    92vw 82vh 0 0    rgba(147, 51, 234, 0.18);
+  animation: particles-rise-2 18s ease-in-out infinite 3s;
+}
+
+@keyframes particles-rise-1 {
+  0%, 100% { transform: translate(0, 0); opacity: 0.4; }
+  25%      { transform: translate(30px, -120px); opacity: 1; }
+  50%      { transform: translate(-20px, -250px); opacity: 0.8; }
+  75%      { transform: translate(40px, -180px); opacity: 1; }
+}
+
+@keyframes particles-rise-2 {
+  0%, 100% { transform: translate(0, 0); opacity: 0.3; }
+  25%      { transform: translate(-40px, -100px); opacity: 0.9; }
+  50%      { transform: translate(25px, -280px); opacity: 0.7; }
+  75%      { transform: translate(-30px, -160px); opacity: 0.9; }
+}
+
+/* ── 3D Wireframe Geometric Shapes ── */
+
+/* Rotating cube outline */
+.bg-3d-cube {
+  position: fixed;
+  width: 60px;
+  height: 60px;
+  top: 18%;
+  right: 8%;
+  z-index: -2;
+  pointer-events: none;
+  border: 1px solid rgba(245, 158, 11, 0.12);
+  animation: cube-rotate 20s linear infinite;
+  transform-style: preserve-3d;
+}
+
+.bg-3d-cube::before {
+  content: '';
+  position: absolute;
+  inset: -12px;
+  border: 1px solid rgba(147, 51, 234, 0.10);
+  animation: cube-rotate 25s linear infinite reverse;
+}
+
+.bg-3d-cube::after {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  border: 1px solid rgba(99, 102, 241, 0.10);
+  animation: cube-rotate 15s linear infinite;
+}
+
+@keyframes cube-rotate {
+  0%   { transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg); }
+  100% { transform: rotateX(360deg) rotateY(360deg) rotateZ(180deg); }
+}
+
+/* Orbiting ring */
+.bg-3d-ring {
+  position: fixed;
+  width: 100px;
+  height: 100px;
+  bottom: 20%;
+  left: 6%;
+  z-index: -2;
+  pointer-events: none;
+  border: 1.5px solid rgba(245, 158, 11, 0.10);
+  border-radius: 50%;
+  animation: ring-orbit 22s linear infinite;
+  transform-style: preserve-3d;
+}
+
+.bg-3d-ring::before {
+  content: '';
+  position: absolute;
+  inset: 15px;
+  border: 1px solid rgba(16, 185, 129, 0.10);
+  border-radius: 50%;
+  animation: ring-orbit 16s linear infinite reverse;
+}
+
+.bg-3d-ring::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  border-radius: 50%;
+  background: rgba(245, 158, 11, 0.20);
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.15);
+  animation: ring-dot-pulse 3s ease-in-out infinite;
+}
+
+@keyframes ring-orbit {
+  0%   { transform: rotateX(65deg) rotateY(0deg); }
+  100% { transform: rotateX(65deg) rotateY(360deg); }
+}
+
+@keyframes ring-dot-pulse {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50%      { opacity: 1; transform: scale(1.6); }
+}
+
+/* Floating diamond */
+.bg-3d-diamond {
+  position: fixed;
+  width: 40px;
+  height: 40px;
+  top: 55%;
+  right: 15%;
+  z-index: -2;
+  pointer-events: none;
+  border: 1px solid rgba(251, 191, 36, 0.12);
+  transform: rotate(45deg);
+  animation: diamond-float 12s ease-in-out infinite;
+}
+
+.bg-3d-diamond::before {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border: 1px solid rgba(234, 88, 12, 0.10);
+}
+
+@keyframes diamond-float {
+  0%, 100% { transform: rotate(45deg) translateY(0) scale(1); opacity: 0.5; }
+  33%      { transform: rotate(45deg) translateY(-20px) scale(1.1); opacity: 0.9; }
+  66%      { transform: rotate(45deg) translateY(10px) scale(0.95); opacity: 0.6; }
+}
+
+/* Hex accent */
+.bg-3d-hex {
+  position: fixed;
+  width: 50px;
+  height: 28px;
+  bottom: 35%;
+  right: 25%;
+  z-index: -2;
+  pointer-events: none;
+  border-top: 1px solid rgba(99, 102, 241, 0.10);
+  border-bottom: 1px solid rgba(99, 102, 241, 0.10);
+  animation: hex-pulse 8s ease-in-out infinite;
+}
+
+.bg-3d-hex::before,
+.bg-3d-hex::after {
+  content: '';
+  position: absolute;
+  width: 35px;
+  height: 35px;
+  border: 1px solid rgba(99, 102, 241, 0.10);
+  transform: scaleY(0.58) rotate(45deg);
+}
+
+.bg-3d-hex::before { top: -18px; left: 7px; }
+.bg-3d-hex::after  { bottom: -18px; left: 7px; }
+
+@keyframes hex-pulse {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50%      { opacity: 0.7; transform: scale(1.15); }
+}
+
+/* ── Light theme shape adjustments ── */
+[data-theme="light"] .bg-3d-cube,
+.light .bg-3d-cube { border-color: rgba(194, 65, 12, 0.10); }
+
+[data-theme="light"] .bg-3d-ring,
+.light .bg-3d-ring { border-color: rgba(217, 119, 6, 0.10); }
+
+[data-theme="light"] .bg-3d-diamond,
+.light .bg-3d-diamond { border-color: rgba(180, 83, 9, 0.10); }
+
+/* ── Stacking context ── */
+.min-h-screen {
+  position: relative;
+  overflow: hidden;
+}
