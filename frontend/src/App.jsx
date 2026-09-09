@@ -5,7 +5,6 @@ import VoicePromptCapture from './components/VoicePromptCapture';
 import VisionScanner from './components/VisionScanner';
 import ListingPhotoStudio from './components/ListingPhotoStudio';
 import PricingCalculator from './components/PricingCalculator';
-import StoryCertificate from './components/StoryCertificate';
 import ONDCPublishModal from './components/ONDCPublishModal';
 import OfflineSyncQueue from './components/OfflineSyncQueue';
 import NationalImpactMetrics from './components/NationalImpactMetrics';
@@ -253,8 +252,8 @@ export default function App() {
       laborHours: pricing.laborHours,
       price: pricing.fairMarketPrice || 1850,
       ondcPublished: true,
-      giCertified: true,
-      trustBadge: scannedCraft.trustBadge || 'Masterpiece Grade A+ (GI Certified)',
+      giCertified: false,
+      trustBadge: scannedCraft.trustBadge || 'Artisan Handcrafted (GI Verification Pending)',
       image: scannedCraft.image,
       dateAdded: new Date().toISOString().split('T')[0],
       syncedWithDb: isOnline,
@@ -343,8 +342,8 @@ export default function App() {
       price: fairPrice,
       suggestedPrice: fairPrice,
       ondcPublished: true,
-      giCertified: true,
-      trustBadge: 'Artisan Verified (PM Vishwakarma)',
+      giCertified: false,
+      trustBadge: 'Artisan Verified (GI Verification Pending)',
       image: 'https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?auto=format&fit=crop&w=800&q=80',
       dateAdded: new Date().toISOString().split('T')[0]
     };
@@ -353,11 +352,44 @@ export default function App() {
     setActiveStep(4);
   };
 
+  const handleVerifyProduct = (productId, verificationData) => {
+    setCatalogueProducts(prev => {
+      const updated = prev.map(p => {
+        if (p.id === productId) {
+          const updatedProduct = {
+            ...p,
+            giCertified: true,
+            giVerifiedAt: new Date().toISOString(),
+            giTagNumber: verificationData.tagNumber || p.giTagNumber || `GI-IN-00${Math.floor(100 + Math.random() * 899)}`,
+            giCluster: verificationData.cluster || p.giCluster || `${verificationData.district || 'Heritage'}, ${verificationData.state || 'India'}`,
+            artisanName: verificationData.artisanName || p.artisanName,
+            pmVishwakarmaId: verificationData.pmVishwakarmaId,
+            originDistrict: verificationData.district,
+            originState: verificationData.state,
+            rawMaterialSource: verificationData.rawMaterialSource,
+            heritageTechnique: verificationData.technique,
+            generationsPracticed: verificationData.generations,
+            trustBadge: 'GI Certified Heritage Craft (PM Vishwakarma)'
+          };
+          if (isOnline) {
+            updateProductInDatabase(productId, {
+              ...updatedProduct,
+              gi_certified: true
+            });
+          }
+          return updatedProduct;
+        }
+        return p;
+      });
+      return updated;
+    });
+  };
+
   const steps = [
     { id: 1, label: t('steps.step1', '1. Voice Prompt'), hint: t('steps.step1Sub', 'Vernacular Speech') },
     { id: 2, label: t('steps.step2', '2. Edge AI Vision'), hint: t('steps.step2Sub', 'Camera & Hard Drive') },
     { id: 3, label: t('steps.step3', '3. ONDC Publish'), hint: t('steps.step3Sub', 'Direct Market Sync') },
-    { id: 4, label: t('steps.step4', '4. My Catalogue'), hint: `${catalogueProducts.length} ${t('catalogue.colProduct', 'Items')}` }
+    { id: 4, label: '4. Catalogue & GI Verification', hint: `${catalogueProducts.length} Items • Verified GI` }
   ];
 
   return (
@@ -551,7 +583,6 @@ export default function App() {
                     onPublishSuccess={handlePublishSuccess}
                     onViewCatalogue={() => setActiveStep(4)}
                   />
-                  <StoryCertificate craft={scannedCraft} />
                   <OfflineSyncQueue isOnline={isOnline} />
                 </div>
               )}
@@ -565,6 +596,7 @@ export default function App() {
                     onEditProduct={handleEditProduct}
                     onToggleOndcStatus={handleToggleOndcStatus}
                     onCreateNewListing={() => setActiveStep(1)}
+                    onVerifyProduct={handleVerifyProduct}
                     pricing={pricing}
                     onPriceCalculated={setPricing}
                     scannedCraft={scannedCraft}
@@ -665,10 +697,7 @@ export default function App() {
                   onPublishSuccess={handlePublishSuccess}
                   onViewCatalogue={() => setActiveStep(4)}
                 />
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <StoryCertificate craft={scannedCraft} />
-                  <OfflineSyncQueue isOnline={isOnline} />
-                </div>
+                <OfflineSyncQueue isOnline={isOnline} />
               </div>
             )}
 
@@ -682,6 +711,7 @@ export default function App() {
                   onEditProduct={handleEditProduct}
                   onToggleOndcStatus={handleToggleOndcStatus}
                   onCreateNewListing={() => setActiveStep(1)}
+                  onVerifyProduct={handleVerifyProduct}
                   pricing={pricing}
                   onPriceCalculated={setPricing}
                   scannedCraft={scannedCraft}

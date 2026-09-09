@@ -13,6 +13,7 @@ import {
   Layers,
   Sparkles,
   ArrowUpRight,
+  ArrowRight,
   Upload,
   HardDrive,
   Camera,
@@ -31,6 +32,9 @@ import {
 import { INITIAL_CATALOGUE, getSuggestedPrice } from '../data/catalogueData';
 import PricingCalculator from './PricingCalculator';
 import { useLanguage } from '../context/LanguageContext';
+import GiVerificationPassportModal from './GiVerificationPassportModal';
+import GiVerificationSystem from './GiVerificationSystem';
+import GiVerificationFormModal from './GiVerificationFormModal';
 
 export { INITIAL_CATALOGUE, getSuggestedPrice };
 
@@ -54,6 +58,7 @@ export default function ArtisanCatalogue({
   onEditProduct,
   onToggleOndcStatus,
   onCreateNewListing,
+  onVerifyProduct,
   pricing,
   onPriceCalculated,
   scannedCraft
@@ -63,6 +68,9 @@ export default function ArtisanCatalogue({
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL'); // 'ALL' | 'ONDC_LIVE' | 'DRAFT'
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'table'
+  const [catalogueSubTab, setCatalogueSubTab] = useState('products'); // 'products' | 'gi-system'
+  const [selectedCertificateProduct, setSelectedCertificateProduct] = useState(null);
+  const [verificationTargetProduct, setVerificationTargetProduct] = useState(null);
 
   // Custom "Other" Category Input States
   const [isOtherCategoryNew, setIsOtherCategoryNew] = useState(false);
@@ -94,7 +102,7 @@ export default function ArtisanCatalogue({
     price: '',
     image: 'https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?auto=format&fit=crop&w=800&q=80',
     ondcPublished: true,
-    giCertified: true
+    giCertified: false
   });
   const fileInputRef = useRef(null);
 
@@ -310,7 +318,7 @@ export default function ArtisanCatalogue({
       price: '',
       image: 'https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?auto=format&fit=crop&w=800&q=80',
       ondcPublished: true,
-      giCertified: true
+      giCertified: false
     });
     showToast(`✨ Product "${newProd.title}" successfully added to your catalogue!`);
   };
@@ -454,7 +462,15 @@ export default function ArtisanCatalogue({
         {/* 4 Overview Metric Tiles */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           
-          <div className="p-3 rounded-xl bg-black/30 border border-[var(--border-glass)]">
+          <div
+            onClick={() => setCatalogueSubTab('products')}
+            className={`p-3 rounded-xl border transition-all cursor-pointer hover:scale-[1.02] ${
+              catalogueSubTab === 'products'
+                ? 'bg-white/10 border-white/30 ring-1 ring-white/30'
+                : 'bg-black/30 border-[var(--border-glass)] hover:border-white/20'
+            }`}
+            title="Click to view product inventory"
+          >
             <div className="text-[11px] text-gray-400 mb-1 flex items-center justify-between">
               <span>{t('stats.productsListed', 'Total Listed')}</span>
               <Package className="w-3.5 h-3.5 text-amber-400" />
@@ -487,18 +503,64 @@ export default function ArtisanCatalogue({
             <p className="text-[10px] text-gray-400 mt-0.5">{t('catalogue.suggestedFairPrice', 'Fair living-wage price')}</p>
           </div>
 
-          <div className="p-3 rounded-xl bg-black/30 border border-[var(--border-glass)]">
+          <div
+            onClick={() => setCatalogueSubTab('gi-verification')}
+            className={`p-3 rounded-xl border transition-all cursor-pointer hover:scale-[1.02] ${
+              catalogueSubTab === 'gi-verification'
+                ? 'bg-amber-500/20 border-amber-500 ring-1 ring-amber-400'
+                : 'bg-black/30 border-[var(--border-glass)] hover:border-amber-500/40'
+            }`}
+            title="Click to view dedicated GI Verification System & Passports"
+          >
             <div className="text-[11px] text-gray-400 mb-1 flex items-center justify-between">
-              <span>GI Tagged</span>
+              <span className="font-semibold text-amber-300">GI Verified System</span>
               <Award className="w-3.5 h-3.5 text-[var(--color-terracotta)]" />
             </div>
             <div className="text-xl font-bold text-amber-300 font-heading">
               {giCertifiedCount}
             </div>
-            <p className="text-[10px] text-gray-400 mt-0.5">{t('studio.verifiedGI', 'Geographical Indication')}</p>
+            <p className="text-[10px] text-amber-300/90 mt-0.5 font-semibold flex items-center gap-1">
+              <span>{t('studio.verifiedGI', 'Geographical Indication')}</span>
+              <ArrowRight className="w-2.5 h-2.5" />
+            </p>
           </div>
 
         </div>
+      </div>
+
+      {/* View Switcher Bar: Products Inventory vs GI Verification System */}
+      <div className="glass-panel p-2 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setCatalogueSubTab('products')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
+              catalogueSubTab === 'products'
+                ? 'bg-amber-500 text-black shadow-lg'
+                : 'text-gray-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Package className="w-4 h-4" />
+            <span>Product Inventory ({products.length})</span>
+          </button>
+          
+          <button
+            type="button"
+            onClick={() => setCatalogueSubTab('gi-verification')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
+              catalogueSubTab === 'gi-verification'
+                ? 'bg-[var(--color-terracotta)] text-white shadow-lg ring-2 ring-amber-400/40'
+                : 'text-amber-300 hover:text-white hover:bg-white/5 border border-amber-500/30'
+            }`}
+          >
+            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            <span>GI Verification System & Passports ({giCertifiedCount})</span>
+          </button>
+        </div>
+
+        <span className="text-[11px] text-gray-400 hidden sm:inline font-mono">
+          {catalogueSubTab === 'products' ? 'Catalog Inventory Mode' : 'Govt. Registry & Provenance Audit Mode'}
+        </span>
       </div>
 
       {/* Merged AI Price Suggestion Engine (Embedded in My Catalogue) */}
@@ -513,6 +575,16 @@ export default function ArtisanCatalogue({
           />
         </div>
       )}
+
+      {catalogueSubTab === 'gi-verification' ? (
+        <GiVerificationSystem
+          products={products}
+          onBackToCatalog={() => setCatalogueSubTab('products')}
+          onApplyVerification={(prod) => setVerificationTargetProduct(prod)}
+          onOpenCertificateModal={(prod) => setSelectedCertificateProduct(prod)}
+        />
+      ) : (
+        <>
 
       {/* Filter & Search Bar */}
       <div className="glass-panel p-3.5 flex flex-wrap items-center justify-between gap-3">
@@ -637,10 +709,24 @@ export default function ArtisanCatalogue({
                     <span className="bg-black/70 backdrop-blur-sm text-gray-200 text-[10px] font-mono px-2 py-0.5 rounded-full border border-white/15">
                       {product.sku}
                     </span>
-                    {product.giCertified && (
-                      <span className="bg-amber-500/90 text-black text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow flex items-center gap-1">
+                    {product.giCertified ? (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCertificateProduct(product)}
+                        className="bg-amber-500 hover:bg-amber-400 text-black text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow flex items-center gap-1 transition-transform hover:scale-105 cursor-pointer"
+                        title="GI Certified: Click to view official GI Heritage Certificate & Passport"
+                      >
                         <Award className="w-3 h-3" /> GI TAG
-                      </span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setVerificationTargetProduct(product)}
+                        className="bg-slate-900/90 hover:bg-amber-500/20 text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-500/40 shadow flex items-center gap-1 transition-all hover:scale-105 cursor-pointer"
+                        title="GI Not Verified: Click to complete 5-point statutory questionnaire"
+                      >
+                        <ShieldCheck className="w-3 h-3 text-amber-400" /> Apply GI Tag
+                      </button>
                     )}
                     {product.offlineQueued || product.syncedWithDb === false ? (
                       <span className="bg-amber-950/90 backdrop-blur-sm text-amber-300 text-[9px] font-semibold px-2 py-0.5 rounded-full border border-amber-500/40 flex items-center gap-1 font-mono">
@@ -730,6 +816,28 @@ export default function ArtisanCatalogue({
                 </button>
 
                 <div className="flex items-center gap-1.5">
+                  {product.giCertified ? (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedCertificateProduct(product)}
+                      className="text-amber-300 hover:text-amber-200 hover:bg-amber-500/20 px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 text-[11px] border border-amber-500/35 font-semibold shadow-sm"
+                      title="View verified GI Heritage Certificate & Passport"
+                    >
+                      <Award className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Certificate</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setVerificationTargetProduct(product)}
+                      className="text-amber-400 hover:text-amber-300 hover:bg-amber-500/20 px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 text-[11px] border border-dashed border-amber-500/50 font-semibold shadow-sm"
+                      title="Not verified yet - Fill 5-point questionnaire to verify GI heritage"
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Verify GI</span>
+                    </button>
+                  )}
+
                   <button
                     onClick={() => handleOpenEditModal(product)}
                     className="text-amber-400 hover:text-amber-300 hover:bg-amber-500/15 px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 text-[11px] border border-amber-500/30 font-semibold"
@@ -784,8 +892,27 @@ export default function ArtisanCatalogue({
                         <div className="font-semibold text-white truncate max-w-[200px]" title={product.title}>
                           {product.title}
                         </div>
-                        <div className="text-[10px] text-gray-400 font-mono">
-                          {product.sku}
+                        <div className="text-[10px] text-gray-400 font-mono flex items-center gap-1.5 mt-0.5">
+                          <span>{product.sku}</span>
+                          {product.giCertified ? (
+                            <button
+                              type="button"
+                              onClick={() => setSelectedCertificateProduct(product)}
+                              className="text-[9px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/35 px-1.5 py-0.2 rounded hover:bg-amber-500/30 flex items-center gap-0.5 cursor-pointer"
+                              title="Click to view GI Certificate"
+                            >
+                              <Award className="w-2.5 h-2.5 text-amber-400" /> GI TAG
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setVerificationTargetProduct(product)}
+                              className="text-[9px] font-bold bg-slate-900 text-amber-400/90 border border-amber-500/30 px-1.5 py-0.2 rounded hover:bg-amber-500/20 flex items-center gap-0.5 cursor-pointer"
+                              title="Click to complete 5-point verification questionnaire"
+                            >
+                              <ShieldCheck className="w-2.5 h-2.5 text-amber-400" /> Verify GI
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -830,6 +957,25 @@ export default function ArtisanCatalogue({
                   </td>
                   <td className="p-3 text-right">
                     <div className="flex items-center justify-end gap-1.5">
+                      {product.giCertified ? (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedCertificateProduct(product)}
+                          className="p-1.5 text-amber-300 hover:text-amber-200 hover:bg-amber-500/20 rounded-lg transition-all border border-amber-500/25"
+                          title="View verified GI Heritage Certificate & Passport"
+                        >
+                          <Award className="w-4 h-4 text-amber-400" />
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setVerificationTargetProduct(product)}
+                          className="p-1.5 text-amber-400 hover:text-amber-300 hover:bg-amber-500/20 rounded-lg transition-all border border-dashed border-amber-500/40"
+                          title="Apply for GI Verification: Complete 5-point questionnaire"
+                        >
+                          <ShieldCheck className="w-4 h-4 text-amber-400" />
+                        </button>
+                      )}
                       <button
                         onClick={() => handleOpenEditModal(product)}
                         className="p-1.5 text-amber-400 hover:text-amber-300 hover:bg-amber-500/20 rounded-lg transition-all"
@@ -852,6 +998,8 @@ export default function ArtisanCatalogue({
             </tbody>
           </table>
         </div>
+      )}
+      </>
       )}
 
       {/* --- ADD NEW PRODUCT MODAL --- */}
@@ -1178,15 +1326,10 @@ export default function ArtisanCatalogue({
                   <span>Publish directly to ONDC Open Network</span>
                 </label>
 
-                <label className="flex items-center gap-2 cursor-pointer text-gray-300">
-                  <input
-                    type="checkbox"
-                    checked={newProductForm.giCertified}
-                    onChange={(e) => setNewProductForm({ ...newProductForm, giCertified: e.target.checked })}
-                    className="rounded text-amber-500 focus:ring-0"
-                  />
-                  <span>GI Certified / Heritage Stamp</span>
-                </label>
+                <div className="flex items-center gap-2 text-xs text-amber-300/80 bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-lg">
+                  <ShieldCheck className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span>GI Verification: Requires completing the 5-point statutory questionnaire after adding.</span>
+                </div>
               </div>
 
               {/* Modal Actions */}
@@ -1583,15 +1726,17 @@ export default function ArtisanCatalogue({
                   <span>Active on ONDC Network</span>
                 </label>
 
-                <label className="flex items-center gap-2 cursor-pointer text-gray-300">
-                  <input
-                    type="checkbox"
-                    checked={productToEdit.giCertified}
-                    onChange={(e) => setProductToEdit({ ...productToEdit, giCertified: e.target.checked })}
-                    className="rounded text-amber-500 focus:ring-0"
-                  />
-                  <span>GI Certified Seal</span>
-                </label>
+                {productToEdit.giCertified ? (
+                  <div className="flex items-center gap-2 text-xs text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1.5 rounded-lg">
+                    <Award className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <span>✓ GI Certified & Audited</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-xs text-amber-300/90 bg-amber-500/10 border border-amber-500/25 px-3 py-1.5 rounded-lg">
+                    <ShieldCheck className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <span>GI Verification: Pending Questionnaire</span>
+                  </div>
+                )}
               </div>
 
               {/* Modal Actions */}
@@ -1744,6 +1889,26 @@ export default function ArtisanCatalogue({
           </div>
         </div>
       )}
+
+      {/* --- DEDICATED GI HERITAGE VERIFICATION & PASSPORT PORTAL MODAL --- */}
+      <GiVerificationPassportModal
+        isOpen={!!selectedCertificateProduct}
+        product={selectedCertificateProduct}
+        onClose={() => setSelectedCertificateProduct(null)}
+      />
+
+      {/* --- DEDICATED GI HERITAGE VERIFICATION QUESTIONNAIRE BOX MODAL --- */}
+      <GiVerificationFormModal
+        isOpen={!!verificationTargetProduct}
+        product={verificationTargetProduct}
+        onClose={() => setVerificationTargetProduct(null)}
+        onVerificationComplete={(productId, data) => {
+          if (onVerifyProduct) onVerifyProduct(productId, data);
+        }}
+        onOpenCertificateModal={(prod) => {
+          setSelectedCertificateProduct(prod);
+        }}
+      />
 
     </div>
   );

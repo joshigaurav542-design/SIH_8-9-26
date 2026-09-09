@@ -2,8 +2,6 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Camera,
   Scan,
-  Award,
-  CheckCircle,
   ShieldCheck,
   Sparkles,
   RefreshCw,
@@ -32,8 +30,6 @@ import {
   Image as ImageIcon,
   Wand2,
   Compass,
-  BadgeCheck,
-  FileCheck,
   X
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
@@ -376,7 +372,6 @@ export default function VisionScanner({ onScanComplete }) {
   const [isEnhanced, setIsEnhanced] = useState(false);
   const [enhancedImage, setEnhancedImage] = useState(null);
   const [isEnhancing, setIsEnhancing] = useState(false);
-  const [showGiModal, setShowGiModal] = useState(false);
   const [enhanceToast, setEnhanceToast] = useState(false);
 
   // Voice narration state
@@ -1424,79 +1419,6 @@ export default function VisionScanner({ onScanComplete }) {
             </div>
           </div>
 
-          {/* ========================================================= */}
-          {/* 2. GEOGRAPHICAL INDICATION (GI) AUTHENTICITY CARD        */}
-          {/* ========================================================= */}
-          <div className="p-4 rounded-2xl bg-black/40 border border-amber-500/30 shadow-lg space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-white/10">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                <h4 className="text-xs sm:text-sm font-bold text-white font-heading">
-                  Geographical Indication (GI) & Heritage Authenticity
-                </h4>
-              </div>
-              <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-[10px] text-emerald-300 font-semibold font-mono">
-                <BadgeCheck className="w-3.5 h-3.5" />
-                <span>Govt. of India GI Registry Verified</span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-              <div className="p-2.5 rounded-xl bg-black/60 border border-white/10">
-                <span className="text-[10px] text-gray-400 uppercase font-semibold block mb-0.5">
-                  Registered GI Cluster
-                </span>
-                <span className="text-white font-bold block">
-                  {selectedCraft.giCluster || selectedCraft.region}
-                </span>
-                <span className="text-[10px] text-amber-400 font-mono">
-                  Origin: {selectedCraft.region}
-                </span>
-              </div>
-
-              <div className="p-2.5 rounded-xl bg-black/60 border border-white/10">
-                <span className="text-[10px] text-gray-400 uppercase font-semibold block mb-0.5">
-                  GI Registry Code & Class
-                </span>
-                <span className="text-amber-300 font-bold font-mono block">
-                  {selectedCraft.giTagNumber || 'GI-IN-00398'}
-                </span>
-                <span className="text-[10px] text-gray-400">
-                  Class 21 Traditional Handicrafts
-                </span>
-              </div>
-
-              <div className="p-2.5 rounded-xl bg-black/60 border border-white/10 flex flex-col justify-between">
-                <div>
-                  <span className="text-[10px] text-gray-400 uppercase font-semibold block mb-0.5">
-                    Authentic Handcraft Signature
-                  </span>
-                  <span className="text-emerald-400 font-bold block">
-                    {selectedCraft.authenticityFactor || 99.4}% Organic Match
-                  </span>
-                </div>
-                <span className="text-[10px] text-gray-400">
-                  Passed organic handcraft variance check (Non-machine mold)
-                </span>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-              <div className="text-[11px] text-gray-400 flex items-center gap-1.5">
-                <FileCheck className="w-3.5 h-3.5 text-amber-400" />
-                <span>Master Artisan: <strong className="text-white">{selectedCraft.artisanName}</strong></span>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setShowGiModal(true)}
-                className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 flex items-center gap-1.5 transition-all shadow-sm"
-              >
-                <Award className="w-3.5 h-3.5" />
-                <span>View Official GI Heritage Certificate & Stamp</span>
-              </button>
-            </div>
-          </div>
 
           {/* 3 Core Metric Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -1841,104 +1763,7 @@ export default function VisionScanner({ onScanComplete }) {
         </div>
       )}
 
-      {/* --- OFFICIAL DIGITAL GI HERITAGE CERTIFICATE MODAL --- */}
-      {showGiModal && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-          <div className="relative w-full max-w-lg p-6 rounded-2xl bg-gradient-to-br from-[#1c1917] via-[#0c0a09] to-[#1c1917] border-2 border-amber-500/60 shadow-2xl text-white my-8 animate-fade-in">
-            
-            {/* Close Button */}
-            <button
-              onClick={() => setShowGiModal(false)}
-              className="absolute top-4 right-4 p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
 
-            {/* Certificate Header Stamp */}
-            <div className="text-center pb-4 mb-4 border-b border-amber-500/30">
-              <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-gradient-to-br from-amber-400 to-yellow-600 p-0.5 shadow-lg flex items-center justify-center">
-                <div className="w-full h-full bg-[#1c1917] rounded-full flex items-center justify-center">
-                  <Award className="w-6 h-6 text-amber-400" />
-                </div>
-              </div>
-              <span className="text-[10px] tracking-[0.2em] uppercase font-bold text-amber-400 block">
-                Government of India • Geographical Indications Registry
-              </span>
-              <h3 className="text-base sm:text-lg font-bold font-serif text-amber-100 tracking-wide mt-1">
-                PM VISHWAKARMA DIGITAL HERITAGE CERTIFICATE
-              </h3>
-              <p className="text-[10px] text-gray-400 mt-0.5">
-                Certified National Traditional Handicraft Provenance & Quality Stamp
-              </p>
-            </div>
-
-            {/* Certificate Body */}
-            <div className="space-y-3 text-xs">
-              <div className="p-3 rounded-xl bg-black/50 border border-amber-500/20 space-y-1.5">
-                <div className="flex justify-between text-gray-400 text-[11px]">
-                  <span>Product Name:</span>
-                  <span className="text-white font-bold">{selectedCraft.name}</span>
-                </div>
-                <div className="flex justify-between text-gray-400 text-[11px]">
-                  <span>Master Artisan:</span>
-                  <span className="text-amber-300 font-semibold">{selectedCraft.artisanName}</span>
-                </div>
-                <div className="flex justify-between text-gray-400 text-[11px]">
-                  <span>Craft Lineage & Cluster:</span>
-                  <span className="text-white">{selectedCraft.giCluster || selectedCraft.region}</span>
-                </div>
-                <div className="flex justify-between text-gray-400 text-[11px]">
-                  <span>Official GI Registry No.:</span>
-                  <span className="text-emerald-400 font-mono font-bold">{selectedCraft.giTagNumber || 'GI-IN-00398'}</span>
-                </div>
-                <div className="flex justify-between text-gray-400 text-[11px]">
-                  <span>E-Commerce Quality Grade:</span>
-                  <span className="text-amber-300 font-bold">Grade A+ ({cvAnalysis.qualityScore}/100)</span>
-                </div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-200/90 leading-relaxed">
-                This certifies that the inspected artifact exhibits 100% genuine handcrafted material lineage with non-mechanical organic tolerance, conforming to PM Vishwakarma craft standards and verified for direct ONDC open-network commerce.
-              </div>
-
-              {/* Security Seal & Hash */}
-              <div className="flex items-center justify-between pt-2 border-t border-white/10 text-[10px] text-gray-400 font-mono">
-                <div>
-                  <div>DIGITAL STAMP: #GI-{Date.now().toString().slice(-6)}</div>
-                  <div>HASH: SHA256:e82f...91c0</div>
-                </div>
-                <div className="text-right text-emerald-400 font-bold flex items-center gap-1">
-                  <ShieldCheck className="w-4 h-4" />
-                  <span>TAMPER-PROOF VERIFIED</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Modal Actions */}
-            <div className="flex justify-end gap-2.5 mt-5">
-              <button
-                type="button"
-                onClick={() => setShowGiModal(false)}
-                className="btn-secondary px-4 py-1.5 text-xs"
-              >
-                Close
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  alert('📜 Digital GI Heritage Certificate verified and attached to listing payload!');
-                  setShowGiModal(false);
-                }}
-                className="btn-primary px-4 py-1.5 text-xs font-bold flex items-center gap-1.5"
-              >
-                <CheckCircle className="w-3.5 h-3.5" />
-                <span>Attach Certificate to ONDC Listing</span>
-              </button>
-            </div>
-
-          </div>
-        </div>
-      )}
 
     </div>
   );

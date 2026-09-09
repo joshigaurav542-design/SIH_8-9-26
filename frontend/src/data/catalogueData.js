@@ -32,8 +32,8 @@ export const INITIAL_CATALOGUE = [
     laborHours: 32,
     price: 8450,
     ondcPublished: true,
-    giCertified: true,
-    trustBadge: 'National Heritage Masterpiece',
+    giCertified: false,
+    trustBadge: 'Artisan Handcrafted (GI Verification Pending)',
     image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80',
     dateAdded: '2026-09-03'
   },
@@ -50,8 +50,8 @@ export const INITIAL_CATALOGUE = [
     laborHours: 14,
     price: 3200,
     ondcPublished: true,
-    giCertified: true,
-    trustBadge: 'Heritage Certified Grade A',
+    giCertified: false,
+    trustBadge: 'Indigenous Craft (GI Verification Pending)',
     image: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=800&q=80',
     dateAdded: '2026-09-05'
   },
@@ -68,8 +68,8 @@ export const INITIAL_CATALOGUE = [
     laborHours: 6,
     price: 1450,
     ondcPublished: false,
-    giCertified: true,
-    trustBadge: 'GI Tagged Heritage Toy',
+    giCertified: false,
+    trustBadge: 'Traditional Toy (GI Verification Pending)',
     image: 'https://images.unsplash.com/photo-1596461404969-9ae70f2830c1?auto=format&fit=crop&w=800&q=80',
     dateAdded: '2026-09-07'
   }

@@ -29,7 +29,7 @@ export function normalizeProduct(p) {
     rawCost: Number(p.raw_material_cost || p.rawCost || 160),
     laborHours: Number(p.labor_hours || p.laborHours || 8),
     ondcPublished: Boolean(p.ondc_published ?? p.ondcPublished ?? true),
-    giCertified: Boolean(p.gi_certified ?? p.giCertified ?? true),
+    giCertified: Boolean(p.gi_certified ?? p.giCertified ?? false),
     image: p.image_url || p.image || 'https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?auto=format&fit=crop&w=800&q=80',
     trustBadge: p.trust_badge || p.trustBadge || 'Artisan Verified (PM Vishwakarma)',
     syncedWithDb: p.syncedWithDb !== undefined ? Boolean(p.syncedWithDb) : (p.offlineQueued ? false : true),
@@ -173,7 +173,7 @@ export async function syncEdgeSqliteToMainDatabase() {
         artisan_name: prod.artisanName || 'Master Artisan',
         region: prod.region || 'India',
         ondc_published: Boolean(prod.ondcPublished ?? prod.ondc_published ?? true),
-        gi_certified: Boolean(prod.giCertified ?? prod.gi_certified ?? true)
+        gi_certified: Boolean(prod.giCertified ?? prod.gi_certified ?? false)
       };
 
       const res = await fetch(`${API_BASE_URL}/products`, {
@@ -288,7 +288,7 @@ export async function saveProductToDatabase(productPayload, isOnline = true) {
       artisan_name: productPayload.artisanName || 'Master Artisan',
       region: productPayload.region || 'India',
       ondc_published: Boolean(productPayload.ondcPublished ?? productPayload.ondc_published ?? true),
-      gi_certified: Boolean(productPayload.giCertified ?? productPayload.gi_certified ?? true)
+      gi_certified: Boolean(productPayload.giCertified ?? productPayload.gi_certified ?? false)
     };
 
     const res = await fetch(`${API_BASE_URL}/products`, {
