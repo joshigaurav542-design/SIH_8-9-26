@@ -191,3 +191,26 @@ export async function toggleProductOndcInDatabase(productId, ondcPublished) {
     return null;
   }
 }
+
+/**
+ * Process vernacular speech via backend BHASHINI / Whisper AI engine (POST /api/v1/voice/process)
+ */
+export async function processVoicePrompt({ audioBase64, language, sampleText }) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/voice/process`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        audio_base64: audioBase64 || null,
+        language: language || 'hi-IN',
+        sample_text: sampleText || null
+      }),
+      signal: AbortSignal.timeout(4000)
+    });
+    if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.warn('[Voice Service] Backend unreachable or timeout, using edge extraction:', err.message);
+    return null;
+  }
+}

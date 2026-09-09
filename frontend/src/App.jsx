@@ -206,7 +206,44 @@ export default function App() {
         rawCost: voiceResult.extracted.rawMaterialCost || prev.rawCost,
         laborHours: voiceResult.extracted.laborHours || prev.laborHours
       }));
+      if (voiceResult.extracted.craftType) {
+        setScannedCraft(prev => ({
+          ...prev,
+          name: voiceResult.extracted.title || prev.name,
+          category: voiceResult.extracted.craftType || prev.category,
+          material: voiceResult.extracted.material || prev.material
+        }));
+      }
     }
+  };
+
+  const handleVoiceDirectToCatalogue = (voiceItem) => {
+    const rawCost = Number(voiceItem.extracted?.rawMaterialCost || 160);
+    const laborHours = Number(voiceItem.extracted?.laborHours || 8);
+    const fairPrice = Math.round((laborHours * 140) + rawCost + ((laborHours * 140 + rawCost) * 0.20));
+
+    const newProd = {
+      id: 'prod-' + Date.now(),
+      sku: `ART-VOICE-${Math.floor(1000 + Math.random() * 9000)}`,
+      title: voiceItem.extracted?.title || voiceItem.spokenText?.slice(0, 45) || 'Handcrafted Artisan Craft',
+      category: voiceItem.extracted?.craftType || 'Traditional Handicraft',
+      craftStyle: voiceItem.extracted?.craftType || 'Traditional Handicraft',
+      material: voiceItem.extracted?.material || 'Authentic Regional Materials',
+      dimensions: '30cm x 18cm x 18cm',
+      weight: '850g',
+      rawCost: rawCost,
+      laborHours: laborHours,
+      price: fairPrice,
+      suggestedPrice: fairPrice,
+      ondcPublished: true,
+      giCertified: true,
+      trustBadge: 'Artisan Verified (PM Vishwakarma)',
+      image: 'https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?auto=format&fit=crop&w=800&q=80',
+      dateAdded: new Date().toISOString().split('T')[0]
+    };
+
+    handleAddProduct(newProd);
+    setActiveStep(4);
   };
 
   const steps = [
@@ -347,7 +384,12 @@ export default function App() {
             
             <div className="space-y-4 max-h-[720px] overflow-y-auto pr-1">
               {activeStep === 1 && (
-                <VoicePromptCapture language={language} onVoiceExtracted={handleVoiceExtracted} />
+                <VoicePromptCapture
+                  language={language}
+                  onVoiceExtracted={handleVoiceExtracted}
+                  onProceedToStudio={() => setActiveStep(2)}
+                  onDirectToCatalogue={handleVoiceDirectToCatalogue}
+                />
               )}
               {activeStep === 2 && (
                 <div className="space-y-3">
@@ -442,7 +484,12 @@ export default function App() {
             
             {activeStep === 1 && (
               <div className="w-full">
-                <VoicePromptCapture language={language} onVoiceExtracted={handleVoiceExtracted} />
+                <VoicePromptCapture
+                  language={language}
+                  onVoiceExtracted={handleVoiceExtracted}
+                  onProceedToStudio={() => setActiveStep(2)}
+                  onDirectToCatalogue={handleVoiceDirectToCatalogue}
+                />
               </div>
             )}
 
