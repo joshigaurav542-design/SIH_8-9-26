@@ -141,7 +141,7 @@ export default function VoicePromptCapture({ language: propLang, onVoiceExtracte
     lang: activeLang,
     onResult: (text, isFinal) => {
       if (isFinal && text) {
-        setTranscript(prev => (prev ? `${prev} ${text}` : text));
+        setTranscript(text);
       }
     }
   });
@@ -228,19 +228,44 @@ export default function VoicePromptCapture({ language: propLang, onVoiceExtracte
     }
   };
 
-  // Text-to-Speech: Speak parsed understanding
+  // Generate authentic vernacular narration for all 11 Indian languages
+  const getNarrativeForLanguage = (data, lang) => {
+    if (!data) return '';
+    const { craftType, material, laborHours, rawMaterialCost } = data;
+    switch (lang) {
+      case 'hi-IN':
+        return `समझा गया: शिल्प शैली ${craftType} है। निर्माण सामग्री: ${material}। बनाने में ${laborHours} घंटे लगे। कच्चा माल लागत: ${rawMaterialCost} रुपये।`;
+      case 'bn-IN':
+        return `বোঝা গেছে: কারুশিল্পের ধরন ${craftType}। ব্যবহৃত উপাদান: ${material}। তৈরির সময়: ${laborHours} ঘণ্টা। কাঁচামাল খরচ: ${rawMaterialCost} টাকা।`;
+      case 'ta-IN':
+        return `புரிந்துகொள்ளப்பட்டது: கைவினை பாணி ${craftType}. பயன்படுத்தப்பட்ட பொருட்கள்: ${material}. வேலை நேரம்: ${laborHours} மணிநேரம். மூலப்பொருள் செலவு: ${rawMaterialCost} ரூபாய்.`;
+      case 'te-IN':
+        return `అర్థమైంది: హస్తకళా శైలి ${craftType}. ఉపయోగించిన పదార్థాలు: ${material}. తయారీ సమయం: ${laborHours} గంటలు. ముడిసరుకు ఖర్చు: ${rawMaterialCost} రూపాయలు.`;
+      case 'mr-IN':
+        return `समजले: हस्तकला प्रकार ${craftType}. वापरलेली सामग्री: ${material}. कामाची वेळ: ${laborHours} तास. कच्च्या मालाचा खर्च: ${rawMaterialCost} रुपये.`;
+      case 'gu-IN':
+        return `સમજાયું: હસ્તકલા શૈલી ${craftType} છે. વપરાયેલ સામગ્રી: ${material}. બનાવવાનો સમય: ${laborHours} કલાક. કાચા માલનો ખર્ચ: ${rawMaterialCost} રૂપિયા.`;
+      case 'kn-IN':
+        return `ತಿಳಿದಿದೆ: ಕರಕುಶಲ ಶೈಲಿ ${craftType}. ಬಳಸಿದ ಸಾಮಗ್ರಿಗಳು: ${material}. ಕೆಲಸದ ಸಮಯ: ${laborHours} ಗಂಟೆಗಳು. ಕಚ್ಚಾ ಸಾಮಗ್ರಿಯ ವೆಚ್ಚ: ${rawMaterialCost} ರೂಪಾಯಿ.`;
+      case 'ml-IN':
+        return `മനസ്സിലായി: കരകൗശല ശൈലി ${craftType}. ഉപയോഗിച്ച വസ്തുക്കൾ: ${material}. നിർമ്മാണ സമയം: ${laborHours} മണിക്കൂർ. അസംസ്കൃത വസ്തുക്കളുടെ ചെലവ്: ${rawMaterialCost} രൂപ.`;
+      case 'pa-IN':
+        return `ਸਮਝਿਆ ਗਿਆ: ਸ਼ਿਲਪ ਸ਼ੈਲੀ ${craftType} ਹੈ। ਵਰਤੀ ਗਈ ਸਮੱਗਰੀ: ${material}। ਕੰਮ ਦਾ ਸਮਾਂ: ${laborHours} ਘੰਟੇ। ਕੱਚੇ ਮਾਲ ਦੀ ਲਾਗਤ: ${rawMaterialCost} ਰੁਪਏ।`;
+      case 'or-IN':
+        return `ବୁଝାଗଲା: ହସ୍ତଶିଳ୍ପ ଶୈଳୀ ${craftType}। ବ୍ୟବହୃତ ସାମଗ୍ରୀ: ${material}। ନିର୍ମାଣ ସମୟ: ${laborHours} ଘଣ୍ଟା। କଞ୍ଚାମାଲ ଖର୍ଚ୍ଚ: ${rawMaterialCost} ଟଙ୍କା।`;
+      default:
+        return `Understood: Craft style is ${craftType}. Materials used: ${material}. Crafting time: ${laborHours} hours. Raw material cost: ${rawMaterialCost} rupees.`;
+    }
+  };
+
+  // Text-to-Speech: Speak parsed understanding in selected vernacular language
   const handleSpeakExtracted = () => {
     if (!extractedData) return;
     if (isSpeaking) {
       stopSpeaking();
       return;
     }
-    const narrative = (
-      `Understood: Craft style is ${extractedData.craftType}. ` +
-      `Materials used: ${extractedData.material}. ` +
-      `Crafting time: ${extractedData.laborHours} hours. ` +
-      `Raw materials cost: ${extractedData.rawMaterialCost} rupees.`
-    );
+    const narrative = getNarrativeForLanguage(extractedData, activeLang);
     speak(narrative, activeLang);
   };
 
