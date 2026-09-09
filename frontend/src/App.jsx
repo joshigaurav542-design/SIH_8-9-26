@@ -440,32 +440,6 @@ export default function App() {
           {/* View / Mode Toggles */}
           <div className="flex flex-wrap items-center gap-2">
             
-            {/* Studio vs Catalogue Switcher */}
-            <div className="flex items-center glass-pill p-1">
-              <button
-                onClick={() => { if (activeStep === 4) setActiveStep(1); }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                  activeStep !== 4
-                    ? 'bg-[var(--color-terracotta)] text-white shadow-md'
-                    : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>{t('steps.step2', 'AI Listing Studio')}</span>
-              </button>
-              <button
-                onClick={() => setActiveStep(4)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                  activeStep === 4
-                    ? 'bg-amber-500 text-black shadow-md'
-                    : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                <Package className="w-3.5 h-3.5" />
-                <span>{t('steps.step4', 'Catalogue')} ({catalogueProducts.length})</span>
-              </button>
-            </div>
-
             {/* Device Simulation Toggle (Desktop vs Mobile Frame) */}
             <div className="flex items-center glass-pill p-1">
               <button
