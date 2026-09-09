@@ -17,7 +17,7 @@ export default function Navbar({ selectedLang, onSelectLang, isOnline, onToggleO
         
         {/* Brand & SIH Identification */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--color-terracotta)] to-[var(--color-saffron)] flex items-center justify-center shadow-lg shadow-[var(--color-terracotta-glow)]">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--color-terracotta)] to-[var(--color-saffron)] flex items-center justify-center shadow-lg shadow-[var(--color-terracotta-glow)] animate-float-3d">
             <Sparkles className="w-5 h-5 text-white" />
           </div>
           <div>
